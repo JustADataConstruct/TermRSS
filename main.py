@@ -2,12 +2,15 @@ import feedparser
 import json
 import argparse
 from bs4 import BeautifulSoup
+from datetime import datetime
+from time import mktime
 
 #TODO:
 # Update and show new entries since last time - https://stackoverflow.com/questions/474528/what-is-the-best-way-to-repeatedly-execute-a-function-every-x-seconds
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
 # Notification support
+# Work in the background as a daemon, updating and showing notifications. Or just leave it minimized?
 
 feeds = {}
 
@@ -21,7 +24,6 @@ try:
     with open('feedinfo.json') as f:
         s = f.read()
         feeds = json.loads(s)
-        #print(feeds)
         f.close()
 except IOError as e:
     print("Feedinfo not found! Recreating it now.")
@@ -38,28 +40,37 @@ def remove_feed(feedname):
         feeds.pop(feedname)
         save_feed_file()
 
-def view_updates(name): #TODO: Only show updates since last time checked.
+def view_updates(name): #TODO: Show all even if already in the past.
+    try:
+        with open('lastcheck.txt') as f:
+            lastcheck = datetime.strptime(f.read(),'%Y-%m-%d %H:%M:%S')
+            f.close()
+    except IOError as e:
+        w = open('lastcheck.txt','w')
+        w.write(str(datetime(1960,1,1,0,0,0)))
+        w.close()
+        lastcheck = datetime(1960,1,1,0,0,0)
     if name != None and feeds[name] != None:
         s = feedparser.parse(feeds[name])
         print(f"----[{name.upper()} - {feeds[name]}]----")
-        for i in range(0,9):
-            descriptionsoup = BeautifulSoup(s.entries[i].description,'html.parser')
-            print(s.entries[i].title)
-            print(s.entries[i].link)
-            print(descriptionsoup.get_text())
-            print(s.entries[i].published)
-            print('\n')
     else:
         for n in feeds:
             s = feedparser.parse(feeds[n])
             print(f"----[{n.upper()} - {feeds[n]}]----")
-            for i in range(0,9):
-                descriptionsoup = BeautifulSoup(s.entries[i].description,'html.parser')
-                print(s.entries[i].title)
-                print(s.entries[i].link)
-                print(descriptionsoup.get_text())
-                print(s.entries[i].published)
-                print('\n')
+    for e in s.entries:
+        p_date = datetime.fromtimestamp(mktime(e.published_parsed))
+
+        if p_date < lastcheck:
+            break
+        descriptionsoup = BeautifulSoup(e.description,'html.parser')
+        print(e.title)
+        print(e.link)
+        print(descriptionsoup.get_text())
+        print(e.published)
+        print('\n')
+    w = open("lastcheck.txt","w")
+    w.write(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    w.close()
 
 def show_feeds():
     for n in feeds:
