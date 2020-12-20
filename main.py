@@ -1,9 +1,10 @@
 import feedparser
 import json
 import argparse
+from bs4 import BeautifulSoup
 
 #TODO:
-# Update and show new entries since last time
+# Update and show new entries since last time - https://stackoverflow.com/questions/474528/what-is-the-best-way-to-repeatedly-execute-a-function-every-x-seconds
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
 # Notification support
@@ -37,14 +38,38 @@ def remove_feed(feedname):
         feeds.pop(feedname)
         save_feed_file()
 
+def view_updates(name): #TODO: Only show updates since last time checked.
+    if name != None and feeds[name] != None:
+        s = feedparser.parse(feeds[name])
+        print(f"----[{name.upper()} - {feeds[name]}]----")
+        for i in range(0,9):
+            descriptionsoup = BeautifulSoup(s.entries[i].description,'html.parser')
+            print(s.entries[i].title)
+            print(s.entries[i].link)
+            print(descriptionsoup.get_text())
+            print(s.entries[i].published)
+            print('\n')
+    else:
+        for n in feeds:
+            s = feedparser.parse(feeds[n])
+            print(f"----[{n.upper()} - {feeds[n]}]----")
+            for i in range(0,9):
+                descriptionsoup = BeautifulSoup(s.entries[i].description,'html.parser')
+                print(s.entries[i].title)
+                print(s.entries[i].link)
+                print(descriptionsoup.get_text())
+                print(s.entries[i].published)
+                print('\n')
+                
 def show_feeds():
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c","--command",help="Add a feed, remove a feed or show all feeds",choices=['add','remove','show'])
+parser.add_argument("-c","--command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show'])
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
+
 args = parser.parse_args()
 
 if args.command != None:
@@ -62,6 +87,8 @@ if args.command != None:
             print("Feed removed!")
     elif args.command.lower() == "show":
         show_feeds()
+    elif args.command.lower() == "update":
+        view_updates(args.name)
     else:
         parser.print_help()
 else:
