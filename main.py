@@ -60,13 +60,13 @@ def view_updates(name): #TODO: Only show updates since last time checked.
                 print(descriptionsoup.get_text())
                 print(s.entries[i].published)
                 print('\n')
-                
+
 def show_feeds():
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-c","--command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show'])
+parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show'])
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
