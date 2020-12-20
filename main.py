@@ -130,12 +130,15 @@ if args.command != None:
     elif args.command.lower() == "update":
         view_updates(args.name,args.all)
     elif args.command.lower() == "start": #FIXME: Prevent this for running twice; check if the file exists.
-        view_updates(None,False,True)
-        proc = sp.Popen(["python","main.py","show","--bg"]) #FIXME: We lose the process if we close the terminal. Is that okay?
-        w = open("rssclient.pid","w")
-        w.write(str(proc.pid))
-        w.close()
-        print("Background updater started successfully.")
+        if os.path.isfile("rssclient.pid"):
+            print("Background updater already running!")
+        else:
+            view_updates(None,False,True)
+            proc = sp.Popen(["python","main.py","show","--bg"])
+            w = open("rssclient.pid","w")
+            w.write(str(proc.pid))
+            w.close()
+            print("Background updater started successfully.")
     elif args.command.lower() == "stop":
         with open('rssclient.pid') as f:
             pid = f.read()
