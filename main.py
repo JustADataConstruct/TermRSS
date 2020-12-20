@@ -40,7 +40,7 @@ def remove_feed(feedname):
         feeds.pop(feedname)
         save_feed_file()
 
-def view_updates(name): #TODO: Show all even if already in the past.
+def view_updates(name,showall):
     try:
         with open('lastcheck.txt') as f:
             lastcheck = datetime.strptime(f.read(),'%Y-%m-%d %H:%M:%S')
@@ -53,14 +53,22 @@ def view_updates(name): #TODO: Show all even if already in the past.
     if name != None and feeds[name] != None:
         s = feedparser.parse(feeds[name])
         print(f"----[{name.upper()} - {feeds[name]}]----")
+        print_entries(s,lastcheck,showall)
     else:
         for n in feeds:
             s = feedparser.parse(feeds[n])
             print(f"----[{n.upper()} - {feeds[n]}]----")
-    for e in s.entries:
+            print_entries(s,lastcheck,showall)
+    
+    w = open("lastcheck.txt","w")
+    w.write(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+    w.close()
+
+def print_entries(feed,lastcheck,showall):
+    for e in feed.entries:
         p_date = datetime.fromtimestamp(mktime(e.published_parsed))
 
-        if p_date < lastcheck:
+        if showall == False and p_date < lastcheck:
             break
         descriptionsoup = BeautifulSoup(e.description,'html.parser')
         print(e.title)
@@ -68,9 +76,6 @@ def view_updates(name): #TODO: Show all even if already in the past.
         print(descriptionsoup.get_text())
         print(e.published)
         print('\n')
-    w = open("lastcheck.txt","w")
-    w.write(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    w.close()
 
 def show_feeds():
     for n in feeds:
@@ -80,6 +85,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show'])
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
+
+#Flags
+parser.add_argument("-a","--all",help="When calling update, show all elements in a feed, even those already in the past.",action='store_true')
 
 args = parser.parse_args()
 
@@ -99,7 +107,7 @@ if args.command != None:
     elif args.command.lower() == "show":
         show_feeds()
     elif args.command.lower() == "update":
-        view_updates(args.name)
+        view_updates(args.name,args.all)
     else:
         parser.print_help()
 else:
