@@ -3,14 +3,21 @@ import json
 import argparse
 from bs4 import BeautifulSoup
 from datetime import datetime
-from time import mktime
+import subprocess as sp
+import time
+import schedule
+import os
+
 
 #TODO:
-# Update and show new entries since last time - https://stackoverflow.com/questions/474528/what-is-the-best-way-to-repeatedly-execute-a-function-every-x-seconds
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
-# Notification support
-# Work in the background as a daemon, updating and showing notifications. Or just leave it minimized?
+#   Is this really needed?
+# Notification support (WIP)
+# An HTML export to see entries in a prettier way?
+# Move the lastcheck to the json file, so each feed can have its own update date. Allows us to get data from
+#   new feeds without having to use -all
+# Opml import support
 
 feeds = {}
 
@@ -19,6 +26,7 @@ def save_feed_file():
     s = json.dumps(feeds)
     f.write(s)
     f.close()
+    
 
 try:
     with open('feedinfo.json') as f:
@@ -40,7 +48,7 @@ def remove_feed(feedname):
         feeds.pop(feedname)
         save_feed_file()
 
-def view_updates(name,showall):
+def view_updates(name,showall,to_console=True):
     try:
         with open('lastcheck.txt') as f:
             lastcheck = datetime.strptime(f.read(),'%Y-%m-%d %H:%M:%S')
@@ -52,44 +60,57 @@ def view_updates(name,showall):
         lastcheck = datetime(1960,1,1,0,0,0)
     if name != None and feeds[name] != None:
         s = feedparser.parse(feeds[name])
-        print(f"----[{name.upper()} - {feeds[name]}]----")
-        print_entries(s,lastcheck,showall)
+        if to_console:
+            print(f"----[{name.upper()} - {feeds[name]}]----")
+        print_entries(s,lastcheck,showall,to_console)
     else:
         for n in feeds:
             s = feedparser.parse(feeds[n])
-            print(f"----[{n.upper()} - {feeds[n]}]----")
-            print_entries(s,lastcheck,showall)
+            if to_console:
+             print(f"----[{n.upper()} - {feeds[n]}]----")
+            print_entries(s,lastcheck,showall,to_console)
     
-    w = open("lastcheck.txt","w")
-    w.write(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-    w.close()
+    if to_console: #FIXME: With this, the same notifications would repeat each time until the user does a manual update. Do we really like this?
+        w = open("lastcheck.txt","w")
+        w.write(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
+        w.close()
 
-def print_entries(feed,lastcheck,showall):
+def print_entries(feed,lastcheck,showall,to_console):
     for e in feed.entries:
-        p_date = datetime.fromtimestamp(mktime(e.published_parsed))
+        p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
 
         if showall == False and p_date < lastcheck:
             break
         descriptionsoup = BeautifulSoup(e.description,'html.parser')
-        print(e.title)
-        print(e.link)
-        print(descriptionsoup.get_text())
-        print(e.published)
-        print('\n')
-
+        if to_console:
+            print(e.title)
+            print(e.link)
+            print(descriptionsoup.get_text())
+            print(e.published)
+            print('\n')
+        else: #Don't spam notifications if we're doing a manual check.
+            sp.call(['notify-send',e.title,e.link]) #FIXME: Should we use other method instead of notify-send?
+        
 def show_feeds():
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show'])
+parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show','start','stop'])
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
 #Flags
 parser.add_argument("-a","--all",help="When calling update, show all elements in a feed, even those already in the past.",action='store_true')
+parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
 
 args = parser.parse_args()
+
+if args.bg:
+    schedule.every(10).seconds.do(view_updates,name=None,showall=False,to_console=False)
+    while True:
+        schedule.run_pending()
+        time.sleep(1)    
 
 if args.command != None:
     if args.command.lower() == "add":
@@ -108,6 +129,20 @@ if args.command != None:
         show_feeds()
     elif args.command.lower() == "update":
         view_updates(args.name,args.all)
+    elif args.command.lower() == "start": #FIXME: Prevent this for running twice; check if the file exists.
+        view_updates(None,False,True)
+        proc = sp.Popen(["python","main.py","show","--bg"]) #FIXME: We lose the process if we close the terminal. Is that okay?
+        w = open("rssclient.pid","w")
+        w.write(str(proc.pid))
+        w.close()
+        print("Background updater started successfully.")
+    elif args.command.lower() == "stop":
+        with open('rssclient.pid') as f:
+            pid = f.read()
+            os.kill(int(pid),9)
+            f.close()
+        os.remove('rssclient.pid')
+        print("Background updater stopped successfully.")
     else:
         parser.print_help()
 else:
