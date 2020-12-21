@@ -18,9 +18,7 @@ WIP.
 
 ### Add new feeds
 
-    ```
     main.py add -n NAME -u URL [-c CATEGORIES]
-    ```
   
 
  - Name: ID of this feed. Doesn't need to be the "correct" name of the feed.
@@ -28,29 +26,21 @@ WIP.
  - Categories (optional): List of categories of this feed, separated by comma.
 ### Remove a feed
 
-    ```
     main.py remove -n NAME
-    ```
 
  - Name: The ID of the feed you want to remove from your list.
 
 ### View all your feeds
 
-    ```
     main.py show
-    ```
 View all of the feeds in your list, the last time they were check for new entries, and their list of categories.
 ### Update your feeds
 
-    ```
     main.py update
-    ```
 Checks all of your feeds and returns number of entries published after your last check. Does not update the "last_check" property of the feed.
 ### Read entries
 
-    ```
     main.py read [-n NAME] [-a]
-    ```
 Shows the newer entries on the selected feed since your last check, or every entry on that feed. Will update the "last_check" property of the feed.
 
  - Name (optional): ID of the feed you want to read. If it's not present, will return the results of all feeds.
@@ -58,18 +48,14 @@ Shows the newer entries on the selected feed since your last check, or every ent
 
 ### Import feeds
 
-    ```
     main.py -import -u PATH
-    ```
 If you export your feeds in an XML or OPML file from another feed reader, you can import them here. The importer will preserve name, URL, and categories.
 
  - -u: Path to the .xml or .opml file.
 ## Background updater
 If you don't wish to keep checking for new entries manually, the program can check your feeds for you and notify you if there are new entries available. 
 
-    ```
     main.py start
-    ```
 When you run this command, the program creates a file called "rssclient.pid" on its working directory. This file only contains the PID of the background process, so the program can stop it when you run the `stop` command, and will be deleted once the updater is stopped.
 Once the updater is running, the program will check for updates,as in the `update` method, after a certain amount of time. You can configure the frequency of updates in the `update_time_minutes` property of the `config.json` file (default 1 minute).
 If the program finds an entry published at a time after the `last_check` property of that feed, it will show a notification. Please note that this doesn't mark that feed as read: you will be notificated of the same entry each time the program runs until you run `read` or stop the updater.
