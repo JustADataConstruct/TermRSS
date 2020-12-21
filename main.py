@@ -25,6 +25,8 @@ import os
 feeds = {}
 
 def save_feed_file():
+    """Writes the content of the feeds dictionary into a json file.
+    """
     f = open('feedinfo.json','w')
     s = json.dumps(feeds)
     f.write(s)
@@ -43,15 +45,34 @@ except IOError as e:
 
 
 def add_feed(feedname,feedURL):
+    """Adds a new entry to the feeds dictionary, using feedname as key and feedURL as value, then saves the dictionary into a json file
+
+    Args:
+        feedname (string): Identifier for this feed. Doesn't have to be the feed actual name.
+        feedURL (string): Direct URL for the RSS feed.
+    """
     feeds[feedname] = feedURL
     save_feed_file()
 
 def remove_feed(feedname):
+    """Pops the indicated feed from the feeds dictionary and commits changes to the json file.
+
+    Args:
+        feedname (string): Name of the feed to remove
+    """
     if feeds[feedname] !=None:
         feeds.pop(feedname)
         save_feed_file()
 
 def view_updates(name,showall,to_console=True):
+    """Get latest updates from the feeds. By default gets the entries published after the last check time
+       and prints them to the console.
+
+    Args:
+        name (string): If this is the name of an existing feed, only entries of that feed will be returned. If None, grabs entries from all feeds on file.
+        showall (bool): If True, prints every entry in the feed instead of just the newer ones.
+        to_console (bool, optional): If true, prints results to the console. Defaults to True.
+    """
     try:
         with open('lastcheck.txt') as f:
             lastcheck = datetime.strptime(f.read(),'%Y-%m-%d %H:%M:%S')
@@ -79,6 +100,15 @@ def view_updates(name,showall,to_console=True):
         w.close()
 
 def print_entries(feed,lastcheck,showall,to_console):
+    """Either prints entries in a feed into the console or shows a notification from each entry. This function is called by
+    view_updates and shouldn't be called manually.
+
+    Args:
+        feed (string): Name of the feed.
+        lastcheck (datetime): Datetime object of the last time the feeds were checked.
+        showall (bool): If True, prints every entry in the feed instead of just the newer ones.
+        to_console ([bool]): If true, prints results to the console
+    """
     for e in feed.entries:
         p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
 
@@ -95,10 +125,17 @@ def print_entries(feed,lastcheck,showall,to_console):
             sp.call(['notify-send',e.title,e.link]) #FIXME: Should we use other method instead of notify-send?
         
 def show_feeds():
+    """Returns a list of each feed in file.
+    """
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
 def import_feeds(source):
+    """Grabs a opml file and tries to parse and import.
+
+    Args:
+        source (string): Either an URL or a local path to the opml file.
+    """
     result = listparser.parse(source)
     name = result.meta.title
     size = len(result.feeds)
