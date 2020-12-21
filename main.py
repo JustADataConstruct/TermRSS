@@ -16,7 +16,7 @@ import os
 #   Is this really needed?
 # Notification support (WIP)
 # An HTML export to see entries in a prettier way?
-# Category support in feeds file and opml import (multiple category support)
+# Respect categories in opml import (multiple category support)
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Some kind of validation, making sure feeds work before adding them.
@@ -41,7 +41,8 @@ except IOError as e:
     print("Feedinfo not found! Recreating it now.")
     feeds["Feeds For All Sample Feed"] = {
         'url':'https://www.feedforall.com/sample.xml',
-        'last_check': str(datetime(1960,1,1,0,0,0))
+        'last_check': str(datetime(1960,1,1,0,0,0)),
+        'categories:':[]
     }
     save_feed_file()
 
@@ -54,16 +55,18 @@ except IOError as e:
     print("Config file not found. Going back to defaults.")
     config["update_time_minutes"] = 1
 
-def add_feed(feedname,feedURL):
+def add_feed(feedname,feedURL,categories= []):
     """Adds a new entry to the feeds dictionary, using feedname as key and feedURL as value, then saves the dictionary into a json file
 
     Args:
         feedname (string): Identifier for this feed. Doesn't have to be the feed actual name.
         feedURL (string): Direct URL for the RSS feed.
+        categories (string[], optional): List of categories for this feed, if any, separated by comma.
     """
     feeds[feedname.upper()] = {
         'url':feedURL,
-        'last_check':str(datetime(1960,1,1,0,0,0))
+        'last_check':str(datetime(1960,1,1,0,0,0)),
+        'categories':categories
     }
     save_feed_file()
 
@@ -137,7 +140,7 @@ def show_feeds():
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
-def import_feeds(source):
+def import_feeds(source): #TODO: Respect categories.
     """Grabs a opml file and tries to parse and import.
 
     Args:
@@ -169,11 +172,11 @@ parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 #Flags
 parser.add_argument("-a","--all",help="When calling update, show all elements in a feed, even those already in the past.",action='store_true')
 parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
+parser.add_argument("-c","--categories",help="When adding a feed, list of categories, separated by comma.")
 
 args = parser.parse_args()
 
 if args.bg:
-    #schedule.every(10).seconds.do(view_updates,name=None,showall=False,to_console=False)
     schedule.every(config["update_time_minutes"]).minutes.do(view_updates,name=None,showall=False,to_console=False)
     while True:
         schedule.run_pending()
@@ -184,7 +187,11 @@ if args.command != None:
         if args.name == None or args.url == None:
             parser.print_help()
         else:
-            add_feed(args.name,args.url)
+            if args.categories != None:
+                categories = list(args.categories.split(','))
+            else:
+                categories = []
+            add_feed(args.name,args.url,categories)
             print("Feed added!")
     elif args.command.lower() == "remove":
         if args.name == None:
@@ -192,7 +199,7 @@ if args.command != None:
         else:
             remove_feed(args.name)
             print("Feed removed!")
-    elif args.command.lower() == "show":
+    elif args.command.lower() == "show": #TODO: Filter for categories.
         show_feeds()
     elif args.command.lower() == "update":
         view_updates(args.name,args.all)
