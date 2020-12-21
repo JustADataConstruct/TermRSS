@@ -16,10 +16,10 @@ import os
 #   Is this really needed?
 # Notification support (WIP)
 # An HTML export to see entries in a prettier way?
-# Respect categories in opml import (multiple category support)
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Some kind of validation, making sure feeds work before adding them.
+# Better error handling and what to do when feeds fail (and why do they fail)
 
 feeds = {}
 config = {}
@@ -140,7 +140,7 @@ def show_feeds():
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
-def import_feeds(source): #TODO: Respect categories.
+def import_feeds(source):
     """Grabs a opml file and tries to parse and import.
 
     Args:
@@ -157,7 +157,11 @@ def import_feeds(source): #TODO: Respect categories.
     elif answer.lower() == "y" or answer.lower() == "yes":
         try:
             for i in result.feeds:
-                add_feed(i.title,i.url)
+                if len(i.categories) > 0:
+                    categories = i.categories[0]
+                else:
+                    categories = []
+                add_feed(i.title,i.url,categories)
         except Exception as e:
             print(f"Something went wrong when importing feeds!: {e}")
             return
