@@ -18,7 +18,6 @@ import os
 # An HTML export to see entries in a prettier way?
 # Move the lastcheck to the json file, so each feed can have its own update date. Allows us to get data from
 #   new feeds without having to use -all
-# Settings: let the user decide the update frequency.
 # Category support in feeds file and opml import.
 # Autodetect feed from url.
 # Windows support? Pack into exe?
@@ -212,13 +211,16 @@ if args.command != None:
             w.close()
             time = config["update_time_minutes"]
             print(f"Background updater started successfully. Will check for new entries every {time} minutes")
-    elif args.command.lower() == "stop": #FIXME: Show message if trying to stop a stopped service.
-        with open('rssclient.pid') as f:
-            pid = f.read()
-            os.kill(int(pid),9)
-            f.close()
-        os.remove('rssclient.pid')
-        print("Background updater stopped successfully.")
+    elif args.command.lower() == "stop":
+        try:
+            with open('rssclient.pid') as f:
+                pid = f.read()
+                os.kill(int(pid),9)
+                f.close()
+            os.remove('rssclient.pid')
+            print("Background updater stopped successfully.")            
+        except IOError as e:
+            print("Background updater is not running.")
     elif args.command.lower() == "import":
         if args.url == None:
             print("Usage: main.py import -u [OPML URL OR LOCAL PATH]")
