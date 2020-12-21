@@ -26,8 +26,6 @@ feeds = {}
 config = {}
 
 def save_feed_file():
-    """Writes the content of the feeds dictionary into a json file.
-    """
     f = open('feedinfo.json','w')
     s = json.dumps(feeds)
     f.write(s)
@@ -57,13 +55,6 @@ except IOError as e:
     config["update_time_minutes"] = 1
 
 def add_feed(feedname,feedURL,categories= []):
-    """Adds a new entry to the feeds dictionary, using feedname as key and feedURL as value, then saves the dictionary into a json file
-
-    Args:
-        feedname (string): Identifier for this feed. Doesn't have to be the feed actual name.
-        feedURL (string): Direct URL for the RSS feed.
-        categories (string[], optional): List of categories for this feed, if any, separated by comma.
-    """
     feeds[feedname.upper()] = {
         'url':feedURL,
         'last_check':str(datetime(1960,1,1,0,0,0)),
@@ -72,24 +63,11 @@ def add_feed(feedname,feedURL,categories= []):
     save_feed_file()
 
 def remove_feed(feedname):
-    """Pops the indicated feed from the feeds dictionary and commits changes to the json file.
-
-    Args:
-        feedname (string): Name of the feed to remove
-    """
     if feeds[feedname.upper()] !=None:
         feeds.pop(feedname.upper())
         save_feed_file()
 
 def view_updates(name,showall,to_console=True): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
-    """Get latest updates from the feeds. By default gets the entries published after the last check time
-       and prints them to the console.
-
-    Args:
-        name (string): If this is the name of an existing feed, only entries of that feed will be returned. If None, grabs entries from all feeds on file.
-        showall (bool): If True, prints every entry in the feed instead of just the newer ones.
-        to_console (bool, optional): If true, prints results to the console. Defaults to True.
-    """
     if name != None and feeds[name.upper()] != None:
         lastcheck = datetime.strptime(feeds[name.upper()]["last_check"],'%Y-%m-%d %H:%M:%S')
         s = feedparser.parse(feeds[name.upper()]["url"])
@@ -110,15 +88,6 @@ def view_updates(name,showall,to_console=True): #FIXME: If the updater is runnin
     save_feed_file()
         
 def print_entries(feed,lastcheck,showall,to_console):
-    """Either prints entries in a feed into the console or shows a notification from each entry. This function is called by
-    view_updates and shouldn't be called manually.
-
-    Args:
-        feed (string): Name of the feed.
-        lastcheck (datetime): Datetime object of the last time the feeds were checked.
-        showall (bool): If True, prints every entry in the feed instead of just the newer ones.
-        to_console ([bool]): If true, prints results to the console
-    """
     for e in feed.entries:
         p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
 
@@ -136,17 +105,10 @@ def print_entries(feed,lastcheck,showall,to_console):
         
         
 def show_feeds():
-    """Returns a list of each feed in file.
-    """
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
 def import_feeds(source):
-    """Grabs a opml file and tries to parse and import.
-
-    Args:
-        source (string): Either an URL or a local path to the opml file.
-    """
     result = listparser.parse(source)
     name = result.meta.title
     size = len(result.feeds)
