@@ -21,8 +21,10 @@ import os
 # Settings: let the user decide the update frequency.
 # Category support in feeds file and opml import.
 # Autodetect feed from url.
+# Windows support? Pack into exe?
 
 feeds = {}
+config = {}
 
 def save_feed_file():
     """Writes the content of the feeds dictionary into a json file.
@@ -43,6 +45,16 @@ except IOError as e:
     feeds["Feeds For All Sample Feed"] = 'https://www.feedforall.com/sample.xml'
     save_feed_file()
 
+try :
+    with open('config.json') as f:
+        s = f.read()
+        config = json.loads(s)
+        f.close()
+except IOError as e:
+    print("Config file not found. Going back to defaults.")
+    config["update_time_minutes"] = 1
+
+
 
 def add_feed(feedname,feedURL):
     """Adds a new entry to the feeds dictionary, using feedname as key and feedURL as value, then saves the dictionary into a json file
@@ -60,7 +72,7 @@ def remove_feed(feedname):
     Args:
         feedname (string): Name of the feed to remove
     """
-    if feeds[feedname] !=None:
+    if feeds[feedname] !=None: #FIXME: Make this not case sensitive.
         feeds.pop(feedname)
         save_feed_file()
 
@@ -166,7 +178,8 @@ parser.add_argument("--bg",help="System flag to start the background updater. Do
 args = parser.parse_args()
 
 if args.bg:
-    schedule.every(10).seconds.do(view_updates,name=None,showall=False,to_console=False)
+    #schedule.every(10).seconds.do(view_updates,name=None,showall=False,to_console=False)
+    schedule.every(config["update_time_minutes"]).minutes.do(view_updates,name=None,showall=False,to_console=False)
     while True:
         schedule.run_pending()
         time.sleep(1)    
@@ -197,7 +210,8 @@ if args.command != None:
             w = open("rssclient.pid","w")
             w.write(str(proc.pid))
             w.close()
-            print("Background updater started successfully.")
+            time = config["update_time_minutes"]
+            print(f"Background updater started successfully. Will check for new entries every {time} minutes")
     elif args.command.lower() == "stop":
         with open('rssclient.pid') as f:
             pid = f.read()
