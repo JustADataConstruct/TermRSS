@@ -1,4 +1,5 @@
 import feedparser
+import listparser
 import json
 import argparse
 from bs4 import BeautifulSoup
@@ -17,7 +18,9 @@ import os
 # An HTML export to see entries in a prettier way?
 # Move the lastcheck to the json file, so each feed can have its own update date. Allows us to get data from
 #   new feeds without having to use -all
-# Opml import support
+# Settings: let the user decide the update frequency.
+# Category support in feeds file and opml import.
+# Autodetect feed from url.
 
 feeds = {}
 
@@ -95,8 +98,27 @@ def show_feeds():
     for n in feeds:
         print(f"{n} : {feeds[n]}")
 
+def import_feeds(source):
+    result = listparser.parse(source)
+    name = result.meta.title
+    size = len(result.feeds)
+    print(f"Do you want to import {size} feeds from {name}? [y]es/[n]o/[v]iew")
+    answer = input()
+    if answer.lower() == "v" or answer.lower() == "view":
+        for i in result.feeds:
+            print(f"{i.title} : {i.url}")
+    elif answer.lower() == "y" or answer.lower() == "yes":
+        try:
+            for i in result.feeds:
+                add_feed(i.title,i.url)
+        except Exception as e:
+            print(f"Something went wrong when importing feeds!: {e}")
+            return
+        print("Feeds imported successfully.")
+        
+
 parser = argparse.ArgumentParser()
-parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show','start','stop'])
+parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show','start','stop','import']) #FIXME: Update help
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
@@ -129,7 +151,7 @@ if args.command != None:
         show_feeds()
     elif args.command.lower() == "update":
         view_updates(args.name,args.all)
-    elif args.command.lower() == "start": #FIXME: Prevent this for running twice; check if the file exists.
+    elif args.command.lower() == "start":
         if os.path.isfile("rssclient.pid"):
             print("Background updater already running!")
         else:
@@ -146,6 +168,11 @@ if args.command != None:
             f.close()
         os.remove('rssclient.pid')
         print("Background updater stopped successfully.")
+    elif args.command.lower() == "import":
+        if args.url == None:
+            print("Usage: main.py import -u [OPML URL OR LOCAL PATH]")
+        else:
+            import_feeds(args.url)
     else:
         parser.print_help()
 else:
