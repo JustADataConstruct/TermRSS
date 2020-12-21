@@ -33,7 +33,6 @@ def save_feed_file():
     s = json.dumps(feeds)
     f.write(s)
     f.close()
-    
 
 try:
     with open('feedinfo.json') as f:
@@ -42,7 +41,10 @@ try:
         f.close()
 except IOError as e:
     print("Feedinfo not found! Recreating it now.")
-    feeds["Feeds For All Sample Feed"] = 'https://www.feedforall.com/sample.xml'
+    feeds["Feeds For All Sample Feed"] = {
+        'url':'https://www.feedforall.com/sample.xml',
+        'last_check': str(datetime(1960,1,1,0,0,0))
+    }
     save_feed_file()
 
 try :
@@ -63,7 +65,10 @@ def add_feed(feedname,feedURL):
         feedname (string): Identifier for this feed. Doesn't have to be the feed actual name.
         feedURL (string): Direct URL for the RSS feed.
     """
-    feeds[feedname] = feedURL
+    feeds[feedname] = {
+        'url':feedURL,
+        'last_check':str(datetime(1960,1,1,0,0,0))
+    }
     save_feed_file()
 
 def remove_feed(feedname):
@@ -85,32 +90,26 @@ def view_updates(name,showall,to_console=True):
         showall (bool): If True, prints every entry in the feed instead of just the newer ones.
         to_console (bool, optional): If true, prints results to the console. Defaults to True.
     """
-    try:
-        with open('lastcheck.txt') as f:
-            lastcheck = datetime.strptime(f.read(),'%Y-%m-%d %H:%M:%S')
-            f.close()
-    except IOError as e:
-        w = open('lastcheck.txt','w')
-        w.write(str(datetime(1960,1,1,0,0,0)))
-        w.close()
-        lastcheck = datetime(1960,1,1,0,0,0)
     if name != None and feeds[name] != None:
-        s = feedparser.parse(feeds[name])
+        lastcheck = datetime.strptime(feeds[name]["last_check"],'%Y-%m-%d %H:%M:%S')
+        s = feedparser.parse(feeds[name]["url"])
         if to_console:
-            print(f"----[{name.upper()} - {feeds[name]}]----")
+            url = feeds[name]["url"]
+            print(f"----[{name.upper()} - {url}]----")
         print_entries(s,lastcheck,showall,to_console)
     else:
         for n in feeds:
-            s = feedparser.parse(feeds[n])
+            lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
+            s = feedparser.parse(feeds[n]["url"])
             if to_console:
-             print(f"----[{n.upper()} - {feeds[n]}]----")
+                url = feeds[n]["url"]
+                print(f"----[{n.upper()} - {url}]----")
             print_entries(s,lastcheck,showall,to_console)
     
     if to_console: #FIXME: With this, the same notifications would repeat each time until the user does a manual update. Do we really like this?
-        w = open("lastcheck.txt","w")
-        w.write(str(datetime.now().strftime('%Y-%m-%d %H:%M:%S')))
-        w.close()
-
+        feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        save_feed_file()
+        
 def print_entries(feed,lastcheck,showall,to_console):
     """Either prints entries in a feed into the console or shows a notification from each entry. This function is called by
     view_updates and shouldn't be called manually.
@@ -133,8 +132,9 @@ def print_entries(feed,lastcheck,showall,to_console):
             print(descriptionsoup.get_text())
             print(e.published)
             print('\n')
-        else: #Don't spam notifications if we're doing a manual check.
+        else:
             sp.call(['notify-send',e.title,e.link]) #FIXME: Should we use other method instead of notify-send?
+        
         
 def show_feeds():
     """Returns a list of each feed in file.
@@ -212,7 +212,7 @@ if args.command != None:
             w.close()
             time = config["update_time_minutes"]
             print(f"Background updater started successfully. Will check for new entries every {time} minutes")
-    elif args.command.lower() == "stop":
+    elif args.command.lower() == "stop": #FIXME: Show message if trying to stop a stopped service.
         with open('rssclient.pid') as f:
             pid = f.read()
             os.kill(int(pid),9)
