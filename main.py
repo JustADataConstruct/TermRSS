@@ -20,6 +20,7 @@ import os
 # Windows support? Pack into exe?
 # Some kind of validation, making sure feeds work before adding them.
 # Better error handling and what to do when feeds fail (and why do they fail)
+# Change how we update: when we call update, we only print the title of each entry. Add a function read (main.py read -n FEED) to actually read the updates and mark the feed as checked.
 
 feeds = {}
 config = {}
@@ -96,17 +97,17 @@ def view_updates(name,showall,to_console=True): #FIXME: If the updater is runnin
             url = feeds[name.upper()]["url"]
             print(f"----[{name.upper()} - {url}]----")
         print_entries(s,lastcheck,showall,to_console)
+        feeds[name.upper()]["last_check"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S') #TODO: This marks them as read once the notification shows up. Do we like that?
     else:
         for n in feeds:
             lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
             s = feedparser.parse(feeds[n]["url"])
-            if to_console:
+            if to_console: 
                 url = feeds[n]["url"]
                 print(f"----[{n.upper()} - {url}]----")
-            print_entries(s,lastcheck,showall,to_console)    
-        if to_console: #FIXME: With this, the same notifications would repeat each time until the user does a manual update. Do we really like this?
-            feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            save_feed_file()
+            print_entries(s,lastcheck,showall,to_console)
+            feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
+    save_feed_file()
         
 def print_entries(feed,lastcheck,showall,to_console):
     """Either prints entries in a feed into the console or shows a notification from each entry. This function is called by
