@@ -96,7 +96,7 @@ def read_updates(name,showall):
         url = feeds[name.upper()]["url"]
         print(f"----[{name.upper()} - {url}]----")
         print_entries(s,lastcheck,showall)
-        feeds[name.upper()]["last_check"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S') #TODO: This marks them as read once the notification shows up. Do we like that?
+        feeds[name.upper()]["last_check"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     else:
         for n in feeds:
             lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
