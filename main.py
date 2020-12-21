@@ -65,7 +65,7 @@ def add_feed(feedname,feedURL):
         feedname (string): Identifier for this feed. Doesn't have to be the feed actual name.
         feedURL (string): Direct URL for the RSS feed.
     """
-    feeds[feedname] = {
+    feeds[feedname.upper()] = {
         'url':feedURL,
         'last_check':str(datetime(1960,1,1,0,0,0))
     }
@@ -77,11 +77,11 @@ def remove_feed(feedname):
     Args:
         feedname (string): Name of the feed to remove
     """
-    if feeds[feedname] !=None: #FIXME: Make this not case sensitive.
-        feeds.pop(feedname)
+    if feeds[feedname.upper()] !=None:
+        feeds.pop(feedname.upper())
         save_feed_file()
 
-def view_updates(name,showall,to_console=True):
+def view_updates(name,showall,to_console=True): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
     """Get latest updates from the feeds. By default gets the entries published after the last check time
        and prints them to the console.
 
@@ -90,11 +90,11 @@ def view_updates(name,showall,to_console=True):
         showall (bool): If True, prints every entry in the feed instead of just the newer ones.
         to_console (bool, optional): If true, prints results to the console. Defaults to True.
     """
-    if name != None and feeds[name] != None:
-        lastcheck = datetime.strptime(feeds[name]["last_check"],'%Y-%m-%d %H:%M:%S')
-        s = feedparser.parse(feeds[name]["url"])
+    if name != None and feeds[name.upper()] != None:
+        lastcheck = datetime.strptime(feeds[name.upper()]["last_check"],'%Y-%m-%d %H:%M:%S')
+        s = feedparser.parse(feeds[name.upper()]["url"])
         if to_console:
-            url = feeds[name]["url"]
+            url = feeds[name.upper()]["url"]
             print(f"----[{name.upper()} - {url}]----")
         print_entries(s,lastcheck,showall,to_console)
     else:
