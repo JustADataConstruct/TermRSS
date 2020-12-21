@@ -14,13 +14,13 @@ import os
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
 #   Is this really needed?
-# Notification support (WIP)
+# Notification support (WIP) Some action when the notification shows up.
 # An HTML export to see entries in a prettier way?
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Some kind of validation, making sure feeds work before adding them.
 # Better error handling and what to do when feeds fail (and why do they fail)
-# Change how we update: when we call update, we only print the title of each entry. Add a function read (main.py read -n FEED) to actually read the updates and mark the feed as checked.
+# Set update frequency for each feed? Look updatePeriod/updateFrequency
 
 feeds = {}
 config = {}
@@ -67,42 +67,57 @@ def remove_feed(feedname):
         feeds.pop(feedname.upper())
         save_feed_file()
 
-def view_updates(name,showall,to_console=True): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
+def check_new_entries(to_console=True): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
+    entrynumber = {}
+    if to_console:
+        print("Checking for new entries...")
+    for n in feeds:
+        i = 0
+        last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
+        s = feedparser.parse(feeds[n]["url"])
+        for e in s.entries:
+            p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
+            if p_date > last_check: #If newer.
+                i = i+1
+        entrynumber[n]=i
+    for k in entrynumber:
+        n = entrynumber[k]
+        if to_console:
+            print(f"{k}: {n} update(s)")
+        else:
+            if n > 0:
+                sp.call(['notify-send',k,f"{n} updates(s)"]) #FIXME: Should we use other method instead of notify-send?
+
+
+def read_updates(name,showall): 
     if name != None and feeds[name.upper()] != None:
         lastcheck = datetime.strptime(feeds[name.upper()]["last_check"],'%Y-%m-%d %H:%M:%S')
         s = feedparser.parse(feeds[name.upper()]["url"])
-        if to_console:
-            url = feeds[name.upper()]["url"]
-            print(f"----[{name.upper()} - {url}]----")
-        print_entries(s,lastcheck,showall,to_console)
+        url = feeds[name.upper()]["url"]
+        print(f"----[{name.upper()} - {url}]----")
+        print_entries(s,lastcheck,showall)
         feeds[name.upper()]["last_check"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S') #TODO: This marks them as read once the notification shows up. Do we like that?
     else:
         for n in feeds:
             lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
             s = feedparser.parse(feeds[n]["url"])
-            if to_console: 
-                url = feeds[n]["url"]
-                print(f"----[{n.upper()} - {url}]----")
-            print_entries(s,lastcheck,showall,to_console)
+            url = feeds[n]["url"]
+            print(f"----[{n.upper()} - {url}]----")
+            print_entries(s,lastcheck,showall)
             feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
     save_feed_file()
         
-def print_entries(feed,lastcheck,showall,to_console):
+def print_entries(feed,lastcheck,showall):
     for e in feed.entries:
         p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
-
         if showall == False and p_date < lastcheck:
             break
         descriptionsoup = BeautifulSoup(e.description,'html.parser')
-        if to_console:
-            print(e.title)
-            print(e.link)
-            print(descriptionsoup.get_text())
-            print(e.published)
-            print('\n')
-        else:
-            sp.call(['notify-send',e.title,e.link]) #FIXME: Should we use other method instead of notify-send?
-        
+        print(e.title)
+        print(e.link)
+        print(descriptionsoup.get_text())
+        print(e.published)
+        print('\n')       
         
 def show_feeds():
     for n in feeds:
@@ -132,7 +147,7 @@ def import_feeds(source):
         
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','add','remove','show','start','stop','import']) #FIXME: Update help
+parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','read','add','remove','show','start','stop','import']) #FIXME: Update help
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
@@ -144,7 +159,7 @@ parser.add_argument("-c","--categories",help="When adding a feed, list of catego
 args = parser.parse_args()
 
 if args.bg:
-    schedule.every(config["update_time_minutes"]).minutes.do(view_updates,name=None,showall=False,to_console=False)
+    schedule.every(config["update_time_minutes"]).minutes.do(check_new_entries,to_console=False)
     while True:
         schedule.run_pending()
         time.sleep(1)    
@@ -169,12 +184,13 @@ if args.command != None:
     elif args.command.lower() == "show": #TODO: Filter for categories.
         show_feeds()
     elif args.command.lower() == "update":
-        view_updates(args.name,args.all)
+        check_new_entries(True)
+    elif args.command.lower() == "read":
+        read_updates(args.name,args.all)
     elif args.command.lower() == "start":
         if os.path.isfile("rssclient.pid"):
             print("Background updater already running!")
         else:
-            view_updates(None,False,True)
             proc = sp.Popen(["python","main.py","show","--bg"])
             w = open("rssclient.pid","w")
             w.write(str(proc.pid))
