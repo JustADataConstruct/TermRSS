@@ -16,11 +16,10 @@ import os
 #   Is this really needed?
 # Notification support (WIP)
 # An HTML export to see entries in a prettier way?
-# Move the lastcheck to the json file, so each feed can have its own update date. Allows us to get data from
-#   new feeds without having to use -all
-# Category support in feeds file and opml import.
+# Category support in feeds file and opml import (multiple category support)
 # Autodetect feed from url.
 # Windows support? Pack into exe?
+# Some kind of validation, making sure feeds work before adding them.
 
 feeds = {}
 config = {}
@@ -54,8 +53,6 @@ try :
 except IOError as e:
     print("Config file not found. Going back to defaults.")
     config["update_time_minutes"] = 1
-
-
 
 def add_feed(feedname,feedURL):
     """Adds a new entry to the feeds dictionary, using feedname as key and feedURL as value, then saves the dictionary into a json file
@@ -103,11 +100,10 @@ def view_updates(name,showall,to_console=True): #FIXME: If the updater is runnin
             if to_console:
                 url = feeds[n]["url"]
                 print(f"----[{n.upper()} - {url}]----")
-            print_entries(s,lastcheck,showall,to_console)
-    
-    if to_console: #FIXME: With this, the same notifications would repeat each time until the user does a manual update. Do we really like this?
-        feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        save_feed_file()
+            print_entries(s,lastcheck,showall,to_console)    
+        if to_console: #FIXME: With this, the same notifications would repeat each time until the user does a manual update. Do we really like this?
+            feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            save_feed_file()
         
 def print_entries(feed,lastcheck,showall,to_console):
     """Either prints entries in a feed into the console or shows a notification from each entry. This function is called by
