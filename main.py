@@ -10,6 +10,7 @@ import schedule
 import os
 
 
+
 #TODO:
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
@@ -18,8 +19,6 @@ import os
 # An HTML export to see entries in a prettier way?
 # Autodetect feed from url.
 # Windows support? Pack into exe?
-# Some kind of validation, making sure feeds work before adding them.
-# Better error handling and what to do when feeds fail (and why do they fail)
 # Set update frequency for each feed? Look updatePeriod/updateFrequency
 
 feeds = {}
@@ -54,13 +53,22 @@ except IOError as e:
     print("Config file not found. Going back to defaults.")
     config["update_time_minutes"] = 1
 
-def add_feed(feedname,feedURL,categories= []):
+def add_feed(feedname,feedURL,categories=[],force=False):
+    try:
+        f = feedparser.parse(feedURL)
+    except Exception as e:
+        print(f"Something went wrong when trying to parse this feed: {e}")
+        return
+    if len(f.entries) == 0 and force == False :
+        print("No entries detected. Please make sure this URL is a valid feed. If you are sure the URL is correct, repeat the add command with the '-f' flag to forceadd it.")
+        return
     feeds[feedname.upper()] = {
         'url':feedURL,
         'last_check':str(datetime(1960,1,1,0,0,0)),
         'categories':categories
     }
     save_feed_file()
+    print("Feed added!")
 
 def remove_feed(feedname):
     if feeds[feedname.upper()] !=None:
@@ -155,6 +163,7 @@ parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 parser.add_argument("-a","--all",help="When calling update, show all elements in a feed, even those already in the past.",action='store_true')
 parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
 parser.add_argument("-c","--categories",help="When adding a feed, list of categories, separated by comma.")
+parser.add_argument("-f","--force-add",help="Force add a feedd to your list, even if it has no entries.",action="store_true")
 
 args = parser.parse_args()
 
@@ -173,8 +182,7 @@ if args.command != None:
                 categories = list(args.categories.split(','))
             else:
                 categories = []
-            add_feed(args.name,args.url,categories)
-            print("Feed added!")
+            add_feed(args.name,args.url,categories,args.force_add)
     elif args.command.lower() == "remove":
         if args.name == None:
             parser.print_help()
@@ -191,12 +199,15 @@ if args.command != None:
         if os.path.isfile("rssclient.pid"):
             print("Background updater already running!")
         else:
-            proc = sp.Popen(["python","main.py","show","--bg"])
-            w = open("rssclient.pid","w")
-            w.write(str(proc.pid))
-            w.close()
-            time = config["update_time_minutes"]
-            print(f"Background updater started successfully. Will check for new entries every {time} minutes")
+            try:
+                proc = sp.Popen(["python","main.py","show","--bg"])
+                w = open("rssclient.pid","w")
+                w.write(str(proc.pid))
+                w.close()
+                time = config["update_time_minutes"]
+                print(f"Background updater started successfully. Will check for new entries every {time} minutes")
+            except Exception as e:
+                print(f"Something went wrong when trying to run the updater: {e}")
     elif args.command.lower() == "stop":
         try:
             with open('rssclient.pid') as f:

@@ -18,12 +18,13 @@ WIP.
 
 ### Add new feeds
 
-    main.py add -n NAME -u URL [-c CATEGORIES]
+    main.py add -n NAME -u URL [-c CATEGORIES] [-f]
   
 
  - Name: ID of this feed. Doesn't need to be the "correct" name of the feed.
  - Url: Url of the RSS feed, or path of local XML file.
  - Categories (optional): List of categories of this feed, separated by comma.
+ - -f (optional): By default, the program will not add a feed to your list if it can't detect any entries published. You can bypass this by adding this flag when running the command.
 ### Remove a feed
 
     main.py remove -n NAME
