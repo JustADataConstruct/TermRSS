@@ -9,6 +9,8 @@ import time
 import schedule
 import os
 
+from output_helper import OutputHelper
+
 #TODO:
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
@@ -18,10 +20,21 @@ import os
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Set update frequency for each feed?
-# Colorized output?
 
 feeds = {}
 config = {}
+
+try :
+    with open('config.json') as f:
+        s = f.read()
+        config = json.loads(s)
+        f.close()
+except IOError as e:
+    print("Config file not found. Going back to defaults.")
+    config["update_time_minutes"] = 1
+    config["enable_color_output"] = True
+
+output = OutputHelper(config["enable_color_output"]) #TODO: Colorize feed output too.
 
 def save_feed_file():
     f = open('feedinfo.json','w')
@@ -35,7 +48,7 @@ try:
         feeds = json.loads(s)
         f.close()
 except IOError as e:
-    print("Feedinfo not found! Recreating it now.")
+    output.write_error("Feedinfo not found! Recreating it now.")
     feeds["SAMPLE FEED"] = {
         'url':'https://www.feedforall.com/sample.xml',
         'last_check': str(datetime(1960,1,1,0,0,0)),
@@ -43,23 +56,15 @@ except IOError as e:
     }
     save_feed_file()
 
-try :
-    with open('config.json') as f:
-        s = f.read()
-        config = json.loads(s)
-        f.close()
-except IOError as e:
-    print("Config file not found. Going back to defaults.")
-    config["update_time_minutes"] = 1
 
 def add_feed(feedname,feedURL,categories=[],force=False):
     try:
         f = feedparser.parse(feedURL)
     except Exception as e:
-        print(f"Something went wrong when trying to parse this feed ({feedname}): {e}")
+        output.write_error(f"Something went wrong when trying to parse this feed ({feedname}): {e}")
         return
     if len(f.entries) == 0 and force == False :
-        print(f"No entries detected on feed {feedname}. Please make sure this URL is a valid feed. If you are sure the URL is correct, repeat the add command with the '-f' flag to forceadd it.")
+        output.write_error(f"No entries detected on feed {feedname}. Please make sure this URL is a valid feed. If you are sure the URL is correct, repeat the add command with the '-f' flag to forceadd it.")
         return
     feeds[feedname.upper()] = {
         'url':feedURL,
@@ -67,7 +72,7 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'categories':categories
     }
     save_feed_file()
-    print(f"Feed {feedname} added!") 
+    output.write_ok(f"Feed {feedname} added!") 
     if is_updater_running():
         #This is needed so the background process can reload the feed list. It's not pretty but it works.
         stop_background_updater(True)
@@ -81,7 +86,7 @@ def remove_feed(feedname):
 def check_new_entries(to_console=True,categories=[]): #TODO: This is slow. Could we make it faster?
     entrynumber = {}
     if to_console:
-        print("Checking for new entries...")
+        output.write_info("Checking for new entries...")
     if len(categories) > 0:
         lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
     else:
@@ -121,7 +126,7 @@ def read_updates(name,showall,categories=[]):
             lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
             s = feedparser.parse(feeds[n]["url"])
             url = feeds[n]["url"]
-            print(f"----[{n.upper()} - {url}]----")
+            output.write_feed_header(f"----[{n.upper()} - {url}]----")
             print_entries(s,lastcheck,showall)
             feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
     save_feed_file()
@@ -132,10 +137,10 @@ def print_entries(feed,lastcheck,showall):
         if showall == False and p_date < lastcheck:
             break
         descriptionsoup = BeautifulSoup(e.description,'html.parser')
-        print(e.title)
-        print(e.link)
+        output.write_feed_entry(e.title)
+        output.write_feed_link(e.link)
         print(descriptionsoup.get_text())
-        print(e.published)
+        output.write_info(e.published)
         print('\n')       
         
 def show_feeds(categories = []):
@@ -150,7 +155,7 @@ def import_feeds(source):
     result = listparser.parse(source)
     name = result.meta.title
     size = len(result.feeds)
-    print(f"Do you want to import {size} feeds from {name}? [y]es/[n]o/[v]iew")
+    output.write_info(f"Do you want to import {size} feeds from {name}? [y]es/[n]o/[v]iew")
     answer = input()
     if answer.lower() == "v" or answer.lower() == "view":
         for i in result.feeds:
@@ -164,9 +169,9 @@ def import_feeds(source):
                     categories = []
                 add_feed(i.title,i.url,categories)
         except Exception as e:
-            print(f"Something went wrong when importing feeds!: {e}")
+            output.write_error(f"Something went wrong when importing feeds!: {e}")
             return
-        print("Feeds imported successfully.")
+        output.write_ok("Feeds imported successfully.")
 
 def mark_as_read(name,categories=[]):
     if name != None and feeds[name.upper()] != None:
@@ -191,7 +196,7 @@ def start_background_updater(silent=False):
     w.close()
     time = config["update_time_minutes"]
     if silent == False:
-        print(f"Background updater started successfully. Will check for new entries every {time} minute(s)")
+        output.write_ok(f"Background updater started successfully. Will check for new entries every {time} minute(s)")
 def stop_background_updater(silent=False):
     with open('rssclient.pid') as f:
         pid = f.read()
@@ -199,7 +204,7 @@ def stop_background_updater(silent=False):
         f.close()
     os.remove('rssclient.pid')
     if silent == False:
-        print("Background updater stopped successfully.")
+        output.write_ok("Background updater stopped successfully.")
 def is_updater_running():
     return os.path.isfile("rssclient.pid")
 
@@ -238,7 +243,7 @@ if args.command != None:
             parser.print_help()
         else:
             remove_feed(args.name)
-            print("Feed removed!")
+            output.write_ok("Feed removed!")
     elif args.command.lower() == "show":
         show_feeds(categories)
     elif args.command.lower() == "update":
@@ -247,20 +252,20 @@ if args.command != None:
         read_updates(args.name,args.all,categories)
     elif args.command.lower() == "clear":
         mark_as_read(args.name,categories)
-        print("Feeds cleared!")
+        output.write_ok("Feeds cleared!")
     elif args.command.lower() == "start":
         if is_updater_running():
-            print("Background updater already running!")
+            output.write_info("Background updater already running!")
         else:
             try:
                 start_background_updater()
             except Exception as e:
-                print(f"Something went wrong when trying to run the updater: {e}")
+                output.write_error(f"Something went wrong when trying to run the updater: {e}")
     elif args.command.lower() == "stop":
         try:
             stop_background_updater()
         except IOError as e:
-            print("Background updater is not running.")
+            output.write_info("Background updater is not running.")
     elif args.command.lower() == "import":
         if args.url == None:
             print("Usage: main.py import -u [OPML URL OR LOCAL PATH]")
