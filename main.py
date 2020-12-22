@@ -19,7 +19,7 @@ import os
 # An HTML export to see entries in a prettier way?
 # Autodetect feed from url.
 # Windows support? Pack into exe?
-# Set update frequency for each feed? Look updatePeriod/updateFrequency
+# Set update frequency for each feed?
 
 feeds = {}
 config = {}
@@ -40,7 +40,7 @@ except IOError as e:
     feeds["Feeds For All Sample Feed"] = {
         'url':'https://www.feedforall.com/sample.xml',
         'last_check': str(datetime(1960,1,1,0,0,0)),
-        'categories:':[]
+        'categories':[]
     }
     save_feed_file()
 
@@ -75,11 +75,15 @@ def remove_feed(feedname):
         feeds.pop(feedname.upper())
         save_feed_file()
 
-def check_new_entries(to_console=True): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
+def check_new_entries(to_console=True,categories=[]): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
     entrynumber = {}
     if to_console:
         print("Checking for new entries...")
-    for n in feeds:
+    if len(categories) > 0:
+        lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+    else:
+        lst = feeds
+    for n in lst:
         i = 0
         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
         s = feedparser.parse(feeds[n]["url"])
@@ -97,7 +101,7 @@ def check_new_entries(to_console=True): #FIXME: If the updater is running and we
                 sp.call(['notify-send',k,f"{n} updates(s)"]) #FIXME: Should we use other method instead of notify-send?
 
 
-def read_updates(name,showall): 
+def read_updates(name,showall,categories=[]): 
     if name != None and feeds[name.upper()] != None:
         lastcheck = datetime.strptime(feeds[name.upper()]["last_check"],'%Y-%m-%d %H:%M:%S')
         s = feedparser.parse(feeds[name.upper()]["url"])
@@ -106,7 +110,11 @@ def read_updates(name,showall):
         print_entries(s,lastcheck,showall)
         feeds[name.upper()]["last_check"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     else:
-        for n in feeds:
+        if len(categories) > 0:
+            lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+        else:
+            lst = feeds
+        for n in lst:
             lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
             s = feedparser.parse(feeds[n]["url"])
             url = feeds[n]["url"]
@@ -127,9 +135,14 @@ def print_entries(feed,lastcheck,showall):
         print(e.published)
         print('\n')       
         
-def show_feeds():
-    for n in feeds:
-        print(f"{n} : {feeds[n]}")
+def show_feeds(categories = []):
+    if len(categories) > 0:
+        f = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+        for k in f:
+            print(f"{k} : {feeds[k]}")
+    else:
+        for n in feeds:
+            print(f"{n} : {feeds[n]}")
 
 def import_feeds(source):
     result = listparser.parse(source)
@@ -173,15 +186,16 @@ if args.bg:
         schedule.run_pending()
         time.sleep(1)    
 
+if args.categories != None:
+    categories = list(args.categories.split(','))
+else:
+    categories = []
+
 if args.command != None:
     if args.command.lower() == "add":
         if args.name == None or args.url == None:
             parser.print_help()
         else:
-            if args.categories != None:
-                categories = list(args.categories.split(','))
-            else:
-                categories = []
             add_feed(args.name,args.url,categories,args.force_add)
     elif args.command.lower() == "remove":
         if args.name == None:
@@ -189,12 +203,12 @@ if args.command != None:
         else:
             remove_feed(args.name)
             print("Feed removed!")
-    elif args.command.lower() == "show": #TODO: Filter for categories.
-        show_feeds()
+    elif args.command.lower() == "show":
+        show_feeds(categories)
     elif args.command.lower() == "update":
-        check_new_entries(True)
+        check_new_entries(True,categories)
     elif args.command.lower() == "read":
-        read_updates(args.name,args.all)
+        read_updates(args.name,args.all,categories)
     elif args.command.lower() == "start":
         if os.path.isfile("rssclient.pid"):
             print("Background updater already running!")

@@ -33,19 +33,22 @@ WIP.
 
 ### View all your feeds
 
-    main.py show
+    main.py show [-c CATEGORIES]
 View all of the feeds in your list, the last time they were check for new entries, and their list of categories.
+-c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
 ### Update your feeds
 
-    main.py update
+    main.py update [-c CATEGORIES]
 Checks all of your feeds and returns number of entries published after your last check. Does not update the "last_check" property of the feed.
+-c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
 ### Read entries
 
-    main.py read [-n NAME] [-a]
+    main.py read [-n NAME] [-a] [-c CATEGORIES]
 Shows the newer entries on the selected feed since your last check, or every entry on that feed. Will update the "last_check" property of the feed.
 
  - Name (optional): ID of the feed you want to read. If it's not present, will return the results of all feeds.
  - -a (optional): If this flag is present, will show each entry on the feed instead of the newer entries.
+ - -c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
 
 ### Import feeds
 
