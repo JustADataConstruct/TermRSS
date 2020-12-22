@@ -69,6 +69,10 @@ def add_feed(feedname,feedURL,categories=[],force=False):
     }
     save_feed_file()
     print(f"Feed {feedname} added!") 
+    if is_updater_running():
+        #This is needed so the background process can reload the feed list. It's not pretty but it works.
+        stop_background_updater(True)
+        start_background_updater(True)
 
 def remove_feed(feedname):
     if feeds[feedname.upper()] !=None:
@@ -165,7 +169,26 @@ def import_feeds(source):
             print(f"Something went wrong when importing feeds!: {e}")
             return
         print("Feeds imported successfully.")
-        
+
+
+def start_background_updater(silent=False):
+    proc = sp.Popen(["python","main.py","show","--bg"])
+    w = open("rssclient.pid","w")
+    w.write(str(proc.pid))
+    w.close()
+    time = config["update_time_minutes"]
+    if silent == False:
+        print(f"Background updater started successfully. Will check for new entries every {time} minute(s)")
+def stop_background_updater(silent=False):
+    with open('rssclient.pid') as f:
+        pid = f.read()
+        os.kill(int(pid),9)
+        f.close()
+    os.remove('rssclient.pid')
+    if silent == False:
+        print("Background updater stopped successfully.")
+def is_updater_running():
+    return os.path.isfile("rssclient.pid")
 
 parser = argparse.ArgumentParser()
 parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','read','add','remove','show','start','stop','import']) #FIXME: Update help
@@ -210,26 +233,16 @@ if args.command != None:
     elif args.command.lower() == "read":
         read_updates(args.name,args.all,categories)
     elif args.command.lower() == "start":
-        if os.path.isfile("rssclient.pid"):
+        if is_updater_running():
             print("Background updater already running!")
         else:
             try:
-                proc = sp.Popen(["python","main.py","show","--bg"])
-                w = open("rssclient.pid","w")
-                w.write(str(proc.pid))
-                w.close()
-                time = config["update_time_minutes"]
-                print(f"Background updater started successfully. Will check for new entries every {time} minutes")
+                start_background_updater()
             except Exception as e:
                 print(f"Something went wrong when trying to run the updater: {e}")
     elif args.command.lower() == "stop":
         try:
-            with open('rssclient.pid') as f:
-                pid = f.read()
-                os.kill(int(pid),9)
-                f.close()
-            os.remove('rssclient.pid')
-            print("Background updater stopped successfully.")            
+            stop_background_updater()
         except IOError as e:
             print("Background updater is not running.")
     elif args.command.lower() == "import":
