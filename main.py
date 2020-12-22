@@ -9,8 +9,6 @@ import time
 import schedule
 import os
 
-
-
 #TODO:
 # Some kind of GUI (?)
 #   View items on the program, open them in browser, scroll support...
@@ -20,6 +18,7 @@ import os
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Set update frequency for each feed?
+# Colorized output?
 
 feeds = {}
 config = {}
@@ -79,7 +78,7 @@ def remove_feed(feedname):
         feeds.pop(feedname.upper())
         save_feed_file()
 
-def check_new_entries(to_console=True,categories=[]): #FIXME: If the updater is running and we add a new feed, it isn't included on the autoupdates. We need to reload the file.
+def check_new_entries(to_console=True,categories=[]): #TODO: This is slow. Could we make it faster?
     entrynumber = {}
     if to_console:
         print("Checking for new entries...")
@@ -139,7 +138,7 @@ def print_entries(feed,lastcheck,showall):
         print(e.published)
         print('\n')       
         
-def show_feeds(categories = []):
+def show_feeds(categories = []): #FIXME: Redudant. Rewrite it.
     if len(categories) > 0:
         f = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
         for k in f:
@@ -170,6 +169,21 @@ def import_feeds(source):
             return
         print("Feeds imported successfully.")
 
+def mark_as_read(name,categories=[]):
+    if name != None and feeds[name.upper()] != None:
+        feeds[name.upper()]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    else:
+        if len(categories) > 0:
+            lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+        else:
+            lst = feeds
+        for f in lst:
+            feeds[f]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    save_feed_file()
+    if is_updater_running():
+        stop_background_updater()
+        start_background_updater()
+
 
 def start_background_updater(silent=False):
     proc = sp.Popen(["python","main.py","show","--bg"])
@@ -191,7 +205,7 @@ def is_updater_running():
     return os.path.isfile("rssclient.pid")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','read','add','remove','show','start','stop','import']) #FIXME: Update help
+parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','read','add','remove','show','start','stop','import','clear']) #FIXME: Update help
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
@@ -232,6 +246,9 @@ if args.command != None:
         check_new_entries(True,categories)
     elif args.command.lower() == "read":
         read_updates(args.name,args.all,categories)
+    elif args.command.lower() == "clear":
+        mark_as_read(args.name,categories)
+        print("Feeds cleared!")
     elif args.command.lower() == "start":
         if is_updater_running():
             print("Background updater already running!")

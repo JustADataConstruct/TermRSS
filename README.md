@@ -9,6 +9,7 @@ WIP.
     - [View all your feeds](#view-all-your-feeds)
     - [Update your feeds](#update-your-feeds)
     - [Read entries](#read-entries)
+    - [Mark all as read](#mark-all-as-read)
     - [Import feeds](#import-feeds)
   - [Background updater](#background-updater)
   - [The feedinfo.json file](#the-feedinfojson-file)
@@ -49,6 +50,14 @@ Shows the newer entries on the selected feed since your last check, or every ent
  - Name (optional): ID of the feed you want to read. If it's not present, will return the results of all feeds.
  - -a (optional): If this flag is present, will show each entry on the feed instead of the newer entries.
  - -c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
+
+### Mark all as read
+```
+main.py clear [-n NAME] [-c CATEGORIES]
+```
+Marks the selected (or all) feed(s) as just read, without printing the entries.
+- Name (optional): If present, only this feed will be marked as read.
+- -c (optional): List of categories, separated by comma. If present, each feed that is tagged as one of those categories will be marked as read.
 
 ### Import feeds
 
