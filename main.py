@@ -138,14 +138,13 @@ def print_entries(feed,lastcheck,showall):
         print(e.published)
         print('\n')       
         
-def show_feeds(categories = []): #FIXME: Redudant. Rewrite it.
+def show_feeds(categories = []):
     if len(categories) > 0:
-        f = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
-        for k in f:
-            print(f"{k} : {feeds[k]}")
+        lst= [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
     else:
-        for n in feeds:
-            print(f"{n} : {feeds[n]}")
+        lst = feeds
+    for n in lst:
+         print(f"{n} : {feeds[n]}")
 
 def import_feeds(source):
     result = listparser.parse(source)
