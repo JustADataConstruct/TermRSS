@@ -57,10 +57,10 @@ def add_feed(feedname,feedURL,categories=[],force=False):
     try:
         f = feedparser.parse(feedURL)
     except Exception as e:
-        print(f"Something went wrong when trying to parse this feed: {e}")
+        print(f"Something went wrong when trying to parse this feed ({feedname}): {e}")
         return
     if len(f.entries) == 0 and force == False :
-        print("No entries detected. Please make sure this URL is a valid feed. If you are sure the URL is correct, repeat the add command with the '-f' flag to forceadd it.")
+        print(f"No entries detected on feed {feedname}. Please make sure this URL is a valid feed. If you are sure the URL is correct, repeat the add command with the '-f' flag to forceadd it.")
         return
     feeds[feedname.upper()] = {
         'url':feedURL,
@@ -68,7 +68,7 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'categories':categories
     }
     save_feed_file()
-    print("Feed added!")
+    print(f"Feed {feedname} added!") 
 
 def remove_feed(feedname):
     if feeds[feedname.upper()] !=None:
