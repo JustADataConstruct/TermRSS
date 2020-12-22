@@ -37,7 +37,7 @@ try:
         f.close()
 except IOError as e:
     print("Feedinfo not found! Recreating it now.")
-    feeds["Feeds For All Sample Feed"] = {
+    feeds["SAMPLE FEED"] = {
         'url':'https://www.feedforall.com/sample.xml',
         'last_check': str(datetime(1960,1,1,0,0,0)),
         'categories':[]
