@@ -41,6 +41,19 @@ def save_feed_file():
     f.write(s)
     f.close()
 
+def save_cache_file(feedname,feed_content):
+    if os.path.isfile('rsscache.json'):
+        with open('rsscache.json') as f:
+            cache = json.loads(f.read())
+            f.close()
+    else:
+        cache = {}
+    cache[feedname] = feed_content.entries
+    f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this?
+    f.write(json.dumps(cache))
+    f.close()
+    
+
 try:
     with open('feedinfo.json') as f:
         s = f.read()
@@ -51,7 +64,9 @@ except IOError as e:
     feeds["SAMPLE FEED"] = {
         'url':'https://www.feedforall.com/sample.xml',
         'last_check': str(datetime(1960,1,1,0,0,0)),
-        'categories':[]
+        'categories':[],
+        'etag':'',
+        'last-modified':''
     }
     save_feed_file()
 
@@ -65,12 +80,17 @@ def add_feed(feedname,feedURL,categories=[],force=False):
     if len(f.entries) == 0 and force == False :
         output.write_error(f"No entries detected on feed {feedname}. Please make sure this URL is a valid feed. If you are sure the URL is correct, repeat the add command with the '-f' flag to forceadd it.")
         return
+    etag = f.etag if hasattr(f,'etag') else ""
+    modified = f.modified if hasattr(f,'modified') else ""
     feeds[feedname.upper()] = {
         'url':feedURL,
         'last_check':str(datetime(1960,1,1,0,0,0)),
-        'categories':categories
+        'categories':categories,
+        'etag':etag,
+        'last-modified':modified
     }
     save_feed_file()
+    save_cache_file(feedname,f)
     output.write_ok(f"Feed {feedname} added!") 
     if is_updater_running():
         #This is needed so the background process can reload the feed list. It's not pretty but it works.
