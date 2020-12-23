@@ -12,14 +12,13 @@ import os
 from output_helper import OutputHelper
 
 #TODO:
-# Some kind of GUI (?)
-#   View items on the program, open them in browser, scroll support...
-#   Is this really needed?
-# Notification support (WIP) Some action when the notification shows up.
 # An HTML export to see entries in a prettier way?
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Set update frequency for each feed?
+
+#URGENT:
+# Caching mechanism.
 
 feeds = {}
 config = {}
@@ -34,7 +33,7 @@ except IOError as e:
     config["update_time_minutes"] = 1
     config["enable_color_output"] = True
 
-output = OutputHelper(config["enable_color_output"]) #TODO: Colorize feed output too.
+output = OutputHelper(config["enable_color_output"])
 
 def save_feed_file():
     f = open('feedinfo.json','w')
@@ -83,7 +82,7 @@ def remove_feed(feedname):
         feeds.pop(feedname.upper())
         save_feed_file()
 
-def check_new_entries(to_console=True,categories=[]): #TODO: This is slow. Could we make it faster?
+def check_new_entries(to_console=True,categories=[]):
     entrynumber = {}
     if to_console:
         output.write_info("Checking for new entries...")
@@ -209,7 +208,18 @@ def is_updater_running():
     return os.path.isfile("rssclient.pid")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command",help="Add:Add a new feed\nRemove:Remove a feed\nShow:View list of feeds\nUpdate:View latest updates",choices=['update','read','add','remove','show','start','stop','import','clear']) #FIXME: Update help
+
+#TODO: Better help (a man page?)
+s = "Add: Add a new feed to your list.\
+    Remove: Remove a feed from your list.\
+    Show: View all feeds on your list.\
+    Update: Check for new updates on your feeds.\
+    Read: Read the latest updates.\
+    Start/Stop:Start or stop the background updater\
+    Import: Import feeds from an opml file.\
+    Clear: Mark your feeds as read."
+
+parser.add_argument("command",help=s,choices=['update','read','add','remove','show','start','stop','import','clear']) #FIXME: Update help
 parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
@@ -217,7 +227,7 @@ parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 parser.add_argument("-a","--all",help="When calling update, show all elements in a feed, even those already in the past.",action='store_true')
 parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
 parser.add_argument("-c","--categories",help="When adding a feed, list of categories, separated by comma.")
-parser.add_argument("-f","--force-add",help="Force add a feedd to your list, even if it has no entries.",action="store_true")
+parser.add_argument("-f","--force-add",help="Force add a fedd to your list, even if it has no entries.",action="store_true")
 
 args = parser.parse_args()
 
