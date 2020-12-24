@@ -86,6 +86,6 @@ The structure of the file is as follows:
 This file allows you to configure certain parameters of the program.
 The structure of the file is as follows:
 
- - **update_time_minutes** *Default 1*: Amount of time the background updater will wait until it checks again for new entries on your feeds.
+ - **update_time_minutes** *Default 10*: Amount of time the background updater will wait until it checks again for new entries on your feeds.
  - **enable_color_output** *Default True*: If enabled, the program will colorize some of the output strings to make easier to distinguish them. Disable this if you use a custom color scheme in your
  terminal and it's making hard for you to read the text.

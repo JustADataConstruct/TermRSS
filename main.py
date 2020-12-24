@@ -28,7 +28,7 @@ try :
         f.close()
 except IOError as e:
     print("Config file not found. Going back to defaults.")
-    config["update_time_minutes"] = 1
+    config["update_time_minutes"] = 10
     config["enable_color_output"] = True
 
 output = OutputHelper(config["enable_color_output"])
