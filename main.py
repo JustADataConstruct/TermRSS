@@ -134,13 +134,13 @@ def check_cache_valid(name,feed,last_check,to_console,force_refresh):
         print("too soon")
         return load_from_cache(name) #We just automatically return the cached file.
     #If not, we proceed:
-    result = feedparser.parse(feed["url"],etag=etag,modified=modified)
-    if result.status == 304 and force_refresh == False:
+    result = feedparser.parse(feed["url"],etag=etag,modified=modified) if force_refresh == False else feedparser.parse(feed["url"])
+    if result.status == 304:
         #No changes: return cached file.
         print("no changes")
         return load_from_cache(name)
     
-    elif result.status == 200 or force_refresh == True:
+    elif result.status == 200:
         #Something changed.
         print("something changed")
         etag = result.etag if hasattr(result,'etag') else ""
@@ -159,7 +159,7 @@ def check_cache_valid(name,feed,last_check,to_console,force_refresh):
         save_cache_file(name,result)
         return result
 
-def read_updates(name,showall,categories=[]): 
+def read_updates(name,categories=[]): 
     if name != None and feeds[name.upper()] != None:
         lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
         s = load_from_cache(name)
@@ -322,7 +322,7 @@ if args.command != None:
     elif args.command.lower() == "update":
         check_new_entries(True,categories,args.refresh)
     elif args.command.lower() == "read":
-        read_updates(args.name,args.all,categories)
+        read_updates(args.name,categories)
     elif args.command.lower() == "clear":
         mark_as_read(args.name,categories)
         output.write_ok("Feeds cleared!")
