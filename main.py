@@ -65,25 +65,6 @@ def load_from_cache(feedname):
         output.write_error(e)
         return None
 
-try:
-    with open('feedinfo.json') as f:
-        s = f.read()
-        feeds = json.loads(s)
-        f.close()
-except IOError as e:
-    output.write_error("Feedinfo not found! Recreating it now.")
-    initdate = str(datetime(1960,1,1,0,0,0))
-    feeds["SAMPLE FEED"] = {
-        'url':'https://www.feedforall.com/sample.xml',
-        'last_check': initdate,
-        'last_read': initdate,
-        'categories':[],
-        'etag':'',
-        'last-modified':''
-    }
-    save_feed_file()
-
-
 def add_feed(feedname,feedURL,categories=[],force=False):
     try:
         f = feedparser.parse(feedURL)
@@ -223,9 +204,9 @@ def import_feeds(source):
                     categories = []
                 add_feed(i.title,i.url,categories)
         except Exception as e:
-            output.write_error(f"Something went wrong when importing feeds!: {e}")
-            return
-        output.write_ok("Feeds imported successfully.")
+            output.write_error(f"Something went wrong when importing {i}!: {e}")
+        finally:
+            output.write_ok("Feeds imported successfully.")
 
 def mark_as_read(name,categories=[]):
     if name != None and feeds[name.upper()] != None:
@@ -261,6 +242,19 @@ def stop_background_updater(silent=False):
         output.write_ok("Background updater stopped successfully.")
 def is_updater_running():
     return os.path.isfile("rssclient.pid")
+
+
+try:
+    with open('feedinfo.json') as f:
+        s = f.read()
+        feeds = json.loads(s)
+        f.close()
+except IOError as e:
+    output.write_error("Feedinfo not found! Recreating it now.")
+    initdate = str(datetime(1960,1,1,0,0,0))
+    add_feed("Sample feed","https://www.feedforall.com/sample.xml","Test")
+    #save_feed_file()
+
 
 parser = argparse.ArgumentParser()
 
