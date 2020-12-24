@@ -65,6 +65,19 @@ def load_from_cache(feedname):
         output.write_error(e)
         return None
 
+def remove_from_cache(feedname):
+    try:
+        with open('rsscache.json') as f:
+            cache = json.loads(f.read())
+        if cache[feedname.upper()] != None:
+            cache.pop(feedname.upper())
+            with open('rsscache.json','w') as f:
+                f.write(json.dumps(cache))
+    except Exception as e:
+        output.write_error(e)
+
+
+
 def add_feed(feedname,feedURL,categories=[],force=False):
     try:
         f = feedparser.parse(feedURL)
@@ -97,6 +110,7 @@ def remove_feed(feedname):
     if feeds[feedname.upper()] !=None:
         feeds.pop(feedname.upper())
         save_feed_file()
+        remove_from_cache(feedname)
 
 def check_new_entries(to_console=True,categories=[]): #TODO: Force refresh
     if to_console:
