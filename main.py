@@ -112,7 +112,7 @@ def remove_feed(feedname):
         save_feed_file()
         remove_from_cache(feedname)
 
-def check_new_entries(to_console=True,categories=[]): #TODO: Force refresh
+def check_new_entries(to_console=True,categories=[],force_refresh=False):
     if to_console:
         output.write_info("Checking for new entries...")
     if len(categories) > 0:
@@ -121,26 +121,26 @@ def check_new_entries(to_console=True,categories=[]): #TODO: Force refresh
         lst = feeds
     for n in lst:
         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
-        check_cache_valid(n,feeds[n],last_check,to_console)
+        check_cache_valid(n,feeds[n],last_check,to_console,force_refresh)
         feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         save_feed_file()
 
 
-def check_cache_valid(name,feed,last_check,to_console):
+def check_cache_valid(name,feed,last_check,to_console,force_refresh):
     etag = feed["etag"]
     modified = feed["last-modified"]
     diff = datetime.now() - last_check
-    if diff.total_seconds()/60 < config["update_time_minutes"]: #If it's still too soon...
+    if diff.total_seconds()/60 < config["update_time_minutes"] and force_refresh == False: #If it's still too soon...
         print("too soon")
         return load_from_cache(name) #We just automatically return the cached file.
     #If not, we proceed:
     result = feedparser.parse(feed["url"],etag=etag,modified=modified)
-    if result.status == 304:
+    if result.status == 304 and force_refresh == False:
         #No changes: return cached file.
         print("no changes")
         return load_from_cache(name)
     
-    elif result.status == 200:
+    elif result.status == 200 or force_refresh == True:
         #Something changed.
         print("something changed")
         etag = result.etag if hasattr(result,'etag') else ""
@@ -287,7 +287,7 @@ parser.add_argument("-n","--name",help="Name of the feed you want to add/remove"
 parser.add_argument("-u","--url",help="Url of the feed you want to add.")
 
 #Flags
-parser.add_argument("-a","--all",help="When calling update, show all elements in a feed, even those already in the past.",action='store_true')
+parser.add_argument("-r","--refresh",help="When calling update, force to call the server, even if there has been no changes.",action='store_true')
 parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
 parser.add_argument("-c","--categories",help="When adding a feed, list of categories, separated by comma.")
 parser.add_argument("-f","--force-add",help="Force add a fedd to your list, even if it has no entries.",action="store_true")
@@ -295,7 +295,7 @@ parser.add_argument("-f","--force-add",help="Force add a fedd to your list, even
 args = parser.parse_args()
 
 if args.bg:
-    schedule.every(config["update_time_minutes"]).minutes.do(check_new_entries,to_console=False)
+    schedule.every(config["update_time_minutes"]).minutes.do(check_new_entries,to_console=False,force_refresh=False)
     while True:
         schedule.run_pending()
         time.sleep(1)    
@@ -320,7 +320,7 @@ if args.command != None:
     elif args.command.lower() == "show":
         show_feeds(categories)
     elif args.command.lower() == "update":
-        check_new_entries(True,categories)
+        check_new_entries(True,categories,args.refresh)
     elif args.command.lower() == "read":
         read_updates(args.name,args.all,categories)
     elif args.command.lower() == "clear":
