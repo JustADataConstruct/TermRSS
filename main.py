@@ -1,4 +1,5 @@
 import feedparser
+from feedparser import FeedParserDict
 import listparser
 import json
 import argparse
@@ -44,15 +45,26 @@ def save_feed_file():
 def save_cache_file(feedname,feed_content):
     if os.path.isfile('rsscache.json'):
         with open('rsscache.json') as f:
-            cache = json.loads(f.read())
+            cache = json.loads(f.read()) #FIXME: Is there a way of appending without loading the whole file?
             f.close()
     else:
         cache = {}
-    cache[feedname] = feed_content.entries
-    f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this?
+    cache[feedname] = json.dumps(feed_content)
+    f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this? Does it scale well?
     f.write(json.dumps(cache))
     f.close()
-    
+
+def load_from_cache(feedname):
+    try:
+        with open('rsscache.json') as f:
+            s = json.loads(f.read())[feedname]
+            f.close()
+        feed = feedparser.parse(s)
+        s = None #FIXME: Does this help?
+        return feed
+    except Exception as e:
+        output.write_error(e)
+        return None
 
 try:
     with open('feedinfo.json') as f:
@@ -103,7 +115,6 @@ def remove_feed(feedname):
         save_feed_file()
 
 def check_new_entries(to_console=True,categories=[]):
-    entrynumber = {}
     if to_console:
         output.write_info("Checking for new entries...")
     if len(categories) > 0:
@@ -113,19 +124,67 @@ def check_new_entries(to_console=True,categories=[]):
     for n in lst:
         i = 0
         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
-        s = feedparser.parse(feeds[n]["url"])
-        for e in s.entries:
+        feed = check_cache_valid(n,feeds[n],last_check)
+        for e in feed.entries:
             p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
             if p_date > last_check: #If newer.
                 i = i+1
-        entrynumber[n]=i
-    for k in entrynumber:
-        n = entrynumber[k]
         if to_console:
-            print(f"{k}: {n} update(s)")
+            print(f"{n}: {i} update(s)")
         else:
-            if n > 0:
-                sp.call(['notify-send',k,f"{n} updates(s)"]) #FIXME: Should we use other method instead of notify-send?
+            sp.call(['notify-send',n,f"{i} updates(s)"])
+        feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        save_feed_file()
+
+
+def check_cache_valid(name,feed,last_check):
+    etag = feed["etag"]
+    modified = feed["last-modified"]
+    diff = datetime.now() - last_check
+    if diff.total_seconds()/60 < config["update_time_minutes"]: #If it's still too soon...
+        print("too soon")
+        return load_from_cache(name) #We just automatically return the cached file.
+    #If not, we proceed:
+    result = feedparser.parse(feed["url"],etag=etag,modified=modified)
+    if result.status == 304:
+        #No changes: return cached file.
+        print("no changes")
+        return load_from_cache(name)
+    
+    elif result.status == 200:
+        #Something changed.
+        print("something changed")
+        etag = result.etag if hasattr(result,'etag') else ""
+        modified = result.modified if hasattr(result,'modified') else ""
+        feed["etag"] = etag
+        feed["last-modified"] = modified   
+        save_cache_file(name,result)
+        return result
+
+# def check_new_entries(to_console=True,categories=[]):
+#     entrynumber = {}
+#     if to_console:
+#         output.write_info("Checking for new entries...")
+#     if len(categories) > 0:
+#         lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+#     else:
+#         lst = feeds
+#     for n in lst:
+#         i = 0
+#         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
+#         s = feedparser.parse(feeds[n]["url"])
+#         for e in s.entries:
+#             p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
+#             if p_date > last_check: #If newer.
+#                 i = i+1
+#         entrynumber[n]=i
+#     for k in entrynumber:
+#         n = entrynumber[k]
+#         if to_console:
+#             print(f"{k}: {n} update(s)")
+#         else:
+#             if n > 0:
+#                 sp.call(['notify-send',k,f"{n} updates(s)"]) #FIXME: Should we use other method instead of notify-send?
 
 
 def read_updates(name,showall,categories=[]): 
