@@ -1,5 +1,4 @@
 import feedparser
-from feedparser import FeedParserDict
 import listparser
 import json
 import argparse
@@ -11,15 +10,13 @@ import schedule
 import os
 
 from output_helper import OutputHelper
+from cache_helper import CacheHelper
 
 #TODO:
 # An HTML export to see entries in a prettier way?
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Set update frequency for each feed?
-
-#URGENT:
-# Caching mechanism.
 
 feeds = {}
 config = {}
@@ -35,48 +32,13 @@ except IOError as e:
     config["enable_color_output"] = True
 
 output = OutputHelper(config["enable_color_output"])
+cache = CacheHelper(output,config)
 
 def save_feed_file():
     f = open('feedinfo.json','w')
     s = json.dumps(feeds)
     f.write(s)
     f.close()
-
-def save_cache_file(feedname,feed_content):
-    if os.path.isfile('rsscache.json'):
-        with open('rsscache.json') as f:
-            cache = json.loads(f.read()) #FIXME: Is there a way of appending without loading the whole file?
-            f.close()
-    else:
-        cache = {}
-    cache[feedname.upper()] = feed_content
-    f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this? Does it scale well?
-    f.write(json.dumps(cache))
-    f.close()
-
-def load_from_cache(feedname):
-    try:
-        with open('rsscache.json') as f:
-            s = json.loads(f.read())[feedname.upper()]
-            f.close()
-        feed = FeedParserDict(s) #FIXME: Do we actually need this?
-        return feed
-    except Exception as e:
-        output.write_error(e)
-        return None
-
-def remove_from_cache(feedname):
-    try:
-        with open('rsscache.json') as f:
-            cache = json.loads(f.read())
-        if cache[feedname.upper()] != None:
-            cache.pop(feedname.upper())
-            with open('rsscache.json','w') as f:
-                f.write(json.dumps(cache))
-    except Exception as e:
-        output.write_error(e)
-
-
 
 def add_feed(feedname,feedURL,categories=[],force=False):
     try:
@@ -99,7 +61,7 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'last-modified':modified
     }
     save_feed_file()
-    save_cache_file(feedname,f)
+    cache.save_cache_file(feedname,f)
     output.write_ok(f"Feed {feedname} added!") 
     if is_updater_running():
         #This is needed so the background process can reload the feed list. It's not pretty but it works.
@@ -110,7 +72,7 @@ def remove_feed(feedname):
     if feeds[feedname.upper()] !=None:
         feeds.pop(feedname.upper())
         save_feed_file()
-        remove_from_cache(feedname)
+        cache.remove_from_cache(feedname)
 
 def check_new_entries(to_console=True,categories=[],force_refresh=False):
     if to_console:
@@ -121,48 +83,14 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
         lst = feeds
     for n in lst:
         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
-        check_cache_valid(n,feeds[n],last_check,to_console,force_refresh)
+        cache.check_cache_valid(n,feeds[n],last_check,to_console,force_refresh)
         feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         save_feed_file()
-
-
-def check_cache_valid(name,feed,last_check,to_console,force_refresh):
-    etag = feed["etag"]
-    modified = feed["last-modified"]
-    diff = datetime.now() - last_check
-    if diff.total_seconds()/60 < config["update_time_minutes"] and force_refresh == False: #If it's still too soon...
-        print("too soon")
-        return load_from_cache(name) #We just automatically return the cached file.
-    #If not, we proceed:
-    result = feedparser.parse(feed["url"],etag=etag,modified=modified) if force_refresh == False else feedparser.parse(feed["url"])
-    if result.status == 304:
-        #No changes: return cached file.
-        print("no changes")
-        return load_from_cache(name)
-    
-    elif result.status == 200:
-        #Something changed.
-        print("something changed")
-        etag = result.etag if hasattr(result,'etag') else ""
-        modified = result.modified if hasattr(result,'modified') else ""
-        feed["etag"] = etag
-        feed["last-modified"] = modified
-        i = 0
-        for e in result.entries:
-            p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
-            if p_date > last_check: #If newer.
-                i = i+1
-        if to_console:
-            print(f"{name}: {i} update(s)")
-        else:
-            sp.call(['notify-send',name,f"{i} updates(s)"])           
-        save_cache_file(name,result)
-        return result
 
 def read_updates(name,categories=[]): 
     if name != None and feeds[name.upper()] != None:
         lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
-        s = load_from_cache(name)
+        s = cache.load_from_cache(name)
         url = feeds[name.upper()]["url"]
         output.write_feed_header(f"----[{name.upper()} - {url}]----")
         print_entries(s,lastread)
@@ -174,7 +102,7 @@ def read_updates(name,categories=[]):
             lst = feeds
         for n in lst:
             lastread = datetime.strptime(feeds[n]["last_read"],'%Y-%m-%d %H:%M:%S')
-            s = load_from_cache(n)
+            s = cache.load_from_cache(n)
             url = feeds[n]["url"]
             output.write_feed_header(f"----[{n.upper()} - {url}]----")
             print_entries(s,lastread)
@@ -267,7 +195,6 @@ except IOError as e:
     output.write_error("Feedinfo not found! Recreating it now.")
     initdate = str(datetime(1960,1,1,0,0,0))
     add_feed("Sample feed","https://www.feedforall.com/sample.xml","Test")
-    #save_feed_file()
 
 
 parser = argparse.ArgumentParser()
