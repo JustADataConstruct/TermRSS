@@ -49,7 +49,7 @@ def save_cache_file(feedname,feed_content):
             f.close()
     else:
         cache = {}
-    cache[feedname] = json.dumps(feed_content)
+    cache[feedname.upper()] = feed_content
     f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this? Does it scale well?
     f.write(json.dumps(cache))
     f.close()
@@ -57,10 +57,9 @@ def save_cache_file(feedname,feed_content):
 def load_from_cache(feedname):
     try:
         with open('rsscache.json') as f:
-            s = json.loads(f.read())[feedname]
+            s = json.loads(f.read())[feedname.upper()]
             f.close()
-        feed = feedparser.parse(s)
-        s = None #FIXME: Does this help?
+        feed = FeedParserDict(s) #FIXME: Do we actually need this?
         return feed
     except Exception as e:
         output.write_error(e)
@@ -73,9 +72,11 @@ try:
         f.close()
 except IOError as e:
     output.write_error("Feedinfo not found! Recreating it now.")
+    initdate = str(datetime(1960,1,1,0,0,0))
     feeds["SAMPLE FEED"] = {
         'url':'https://www.feedforall.com/sample.xml',
-        'last_check': str(datetime(1960,1,1,0,0,0)),
+        'last_check': initdate,
+        'last_read': initdate,
         'categories':[],
         'etag':'',
         'last-modified':''
@@ -94,9 +95,11 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         return
     etag = f.etag if hasattr(f,'etag') else ""
     modified = f.modified if hasattr(f,'modified') else ""
+    initdate = str(datetime(1960,1,1,0,0,0))
     feeds[feedname.upper()] = {
         'url':feedURL,
-        'last_check':str(datetime(1960,1,1,0,0,0)),
+        'last_check':initdate,
+        'last_read':initdate,
         'categories':categories,
         'etag':etag,
         'last-modified':modified
@@ -114,7 +117,7 @@ def remove_feed(feedname):
         feeds.pop(feedname.upper())
         save_feed_file()
 
-def check_new_entries(to_console=True,categories=[]):
+def check_new_entries(to_console=True,categories=[]): #TODO: Force refresh
     if to_console:
         output.write_info("Checking for new entries...")
     if len(categories) > 0:
@@ -122,22 +125,13 @@ def check_new_entries(to_console=True,categories=[]):
     else:
         lst = feeds
     for n in lst:
-        i = 0
         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
-        feed = check_cache_valid(n,feeds[n],last_check)
-        for e in feed.entries:
-            p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
-            if p_date > last_check: #If newer.
-                i = i+1
-        if to_console:
-            print(f"{n}: {i} update(s)")
-        else:
-            sp.call(['notify-send',n,f"{i} updates(s)"])
+        check_cache_valid(n,feeds[n],last_check,to_console)
         feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         save_feed_file()
 
 
-def check_cache_valid(name,feed,last_check):
+def check_cache_valid(name,feed,last_check,to_console):
     etag = feed["etag"]
     modified = feed["last-modified"]
     diff = datetime.now() - last_check
@@ -157,42 +151,50 @@ def check_cache_valid(name,feed,last_check):
         etag = result.etag if hasattr(result,'etag') else ""
         modified = result.modified if hasattr(result,'modified') else ""
         feed["etag"] = etag
-        feed["last-modified"] = modified   
+        feed["last-modified"] = modified
+        i = 0
+        for e in result.entries:
+            p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
+            if p_date > last_check: #If newer.
+                i = i+1
+        if to_console:
+            print(f"{name}: {i} update(s)")
+        else:
+            sp.call(['notify-send',name,f"{i} updates(s)"])           
         save_cache_file(name,result)
         return result
 
 def read_updates(name,showall,categories=[]): 
     if name != None and feeds[name.upper()] != None:
-        lastcheck = datetime.strptime(feeds[name.upper()]["last_check"],'%Y-%m-%d %H:%M:%S')
-        s = feedparser.parse(feeds[name.upper()]["url"])
+        lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
+        s = load_from_cache(name)
         url = feeds[name.upper()]["url"]
-        print(f"----[{name.upper()} - {url}]----")
-        print_entries(s,lastcheck,showall)
-        feeds[name.upper()]["last_check"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        output.write_feed_header(f"----[{name.upper()} - {url}]----")
+        print_entries(s,lastread)
+        feeds[name.upper()]["last_read"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     else:
         if len(categories) > 0:
             lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
         else:
             lst = feeds
         for n in lst:
-            lastcheck = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
-            s = feedparser.parse(feeds[n]["url"])
+            lastread = datetime.strptime(feeds[n]["last_read"],'%Y-%m-%d %H:%M:%S')
+            s = load_from_cache(n)
             url = feeds[n]["url"]
             output.write_feed_header(f"----[{n.upper()} - {url}]----")
-            print_entries(s,lastcheck,showall)
-            feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
+            print_entries(s,lastread)
+            feeds[n]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
     save_feed_file()
         
-def print_entries(feed,lastcheck,showall):
+def print_entries(feed,lastread):
     for e in feed.entries:
-        p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
-        if showall == False and p_date < lastcheck:
-            break
-        descriptionsoup = BeautifulSoup(e.description,'html.parser')
-        output.write_feed_entry(e.title)
-        output.write_feed_link(e.link)
-        print(descriptionsoup.get_text())
-        output.write_info(e.published)
+        p_date = datetime.fromtimestamp(time.mktime(time.struct_time(e["published_parsed"])))
+        descriptionsoup = BeautifulSoup(e["summary"],'html.parser')
+        new = True if p_date > lastread else False
+        output.write_feed_entry(e["title"],new)
+        output.write_feed_link(e["link"])
+        output.write_feed_description(descriptionsoup.get_text(),new)
+        output.write_info(e["published"])
         print('\n')       
         
 def show_feeds(categories = []):

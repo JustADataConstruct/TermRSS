@@ -11,9 +11,20 @@ class OutputHelper():
             msg = colorama.Back.CYAN + colorama.Fore.BLACK + msg
         print(msg)
 
-    def write_feed_entry(self,msg):
+    def write_feed_entry(self,msg,is_new=False):
+        if is_new:
+            msg = "[NEW] " + msg
+            if self.color:
+                msg = colorama.Style.BRIGHT + msg
+        else:
+            if self.color:
+                msg = colorama.Style.DIM + msg
+        print(msg)
+
+    def write_feed_description(self,msg,is_new=False):
         if self.color:
-            msg = colorama.Style.BRIGHT + msg
+            if is_new == False:
+                msg = colorama.Style.DIM + msg
         print(msg)
 
     def write_feed_link(self,msg):
