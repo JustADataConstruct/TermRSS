@@ -161,32 +161,6 @@ def check_cache_valid(name,feed,last_check):
         save_cache_file(name,result)
         return result
 
-# def check_new_entries(to_console=True,categories=[]):
-#     entrynumber = {}
-#     if to_console:
-#         output.write_info("Checking for new entries...")
-#     if len(categories) > 0:
-#         lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
-#     else:
-#         lst = feeds
-#     for n in lst:
-#         i = 0
-#         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
-#         s = feedparser.parse(feeds[n]["url"])
-#         for e in s.entries:
-#             p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
-#             if p_date > last_check: #If newer.
-#                 i = i+1
-#         entrynumber[n]=i
-#     for k in entrynumber:
-#         n = entrynumber[k]
-#         if to_console:
-#             print(f"{k}: {n} update(s)")
-#         else:
-#             if n > 0:
-#                 sp.call(['notify-send',k,f"{n} updates(s)"]) #FIXME: Should we use other method instead of notify-send?
-
-
 def read_updates(name,showall,categories=[]): 
     if name != None and feeds[name.upper()] != None:
         lastcheck = datetime.strptime(feeds[name.upper()]["last_check"],'%Y-%m-%d %H:%M:%S')
