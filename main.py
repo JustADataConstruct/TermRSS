@@ -155,14 +155,18 @@ def import_feeds(source):
 
 def mark_as_read(name,categories=[]): #FIXME: Change this as last_read.
     if name != None and feeds[name.upper()] != None:
-        feeds[name.upper()]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        feed = feeds[name.upper()]
+        feed["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        feed["unread"] = 0
     else:
         if len(categories) > 0:
             lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
         else:
             lst = feeds
         for f in lst:
-            feeds[f]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            feed = feeds[f]
+            feed["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            feed["unread"] = 0
     save_feed_file()
     if is_updater_running():
         stop_background_updater()
