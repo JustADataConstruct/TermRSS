@@ -65,6 +65,13 @@ class CacheHelper():
         #If not, we proceed:
         result = feedparser.parse(feed["url"],etag=etag,modified=modified) if force_refresh == False else feedparser.parse(feed["url"])
 
+        if result.status == 404:
+            if to_console:
+                self.output.write_error("Got an error 404 while trying to fetch this feed. Please check the URL is correct.")
+            else:
+                sp.call(['notify-send',name,"[ERROR] Error 404 received when fetching the feed."])
+            return
+        
         if result.status == 410: #Feed deleted.
             if to_console:
                 self.output.write_error("This feed has been deleted from the server and will no longer be fetched. Please run remove to remove it from your list.")
