@@ -49,18 +49,29 @@ class CacheHelper():
         except Exception as e:
             self.output.write_error(e)
    
-    def check_cache_valid(self,name,feed,last_check,to_console,force_refresh):
+    def check_cache_valid(self,name,feed,last_check,to_console,force_refresh): #FIXME: Why are we returning? We aren't using it for anything.
         etag = feed["etag"]
         modified = feed["last-modified"]
         diff = datetime.now() - last_check
         if diff.total_seconds()/60 < self.config["update_time_minutes"] and force_refresh == False: #If it's still too soon...
             print("too soon")
+            i = feed["unread"]
+            if to_console:
+                print(f"{name}: {i} unread")
+            else:
+                if i > 0:
+                    sp.call(['notify-send',name,f"{i} unread"])            
             return self.load_from_cache(name) #We just automatically return the cached file.
         #If not, we proceed:
         result = feedparser.parse(feed["url"],etag=etag,modified=modified) if force_refresh == False else feedparser.parse(feed["url"])
         if result.status == 304:
             #No changes: return cached file.
             print("no changes")
+            i = feed["unread"]
+            if to_console:
+                print(f"{name}: {i} unread")
+            else:
+                sp.call(['notify-send',name,f"{i} unread"])                
             return self.load_from_cache(name)
         
         elif result.status == 200:
@@ -78,6 +89,8 @@ class CacheHelper():
             if to_console:
                 print(f"{name}: {i} update(s)")
             else:
-                sp.call(['notify-send',name,f"{i} updates(s)"])           
+                if i > 0:
+                    sp.call(['notify-send',name,f"{i} updates(s)"])      
+            feed["unread"] = i     
             self.save_cache_file(name,result)
             return result

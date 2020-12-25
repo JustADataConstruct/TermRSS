@@ -58,7 +58,8 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'last_read':initdate,
         'categories':categories,
         'etag':etag,
-        'last-modified':modified
+        'last-modified':modified,
+        'unread':len(f.entries)
     }
     save_feed_file()
     cache.save_cache_file(feedname,f)
@@ -95,6 +96,7 @@ def read_updates(name,categories=[]):
         output.write_feed_header(f"----[{name.upper()} - {url}]----")
         print_entries(s,lastread)
         feeds[name.upper()]["last_read"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        feeds[name.upper()]["unread"] = 0
     else:
         if len(categories) > 0:
             lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
@@ -107,6 +109,7 @@ def read_updates(name,categories=[]):
             output.write_feed_header(f"----[{n.upper()} - {url}]----")
             print_entries(s,lastread)
             feeds[n]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
+            feeds[n]["unread"] = 0
     save_feed_file()
         
 def print_entries(feed,lastread):
@@ -150,7 +153,7 @@ def import_feeds(source):
         finally:
             output.write_ok("Feeds imported successfully.")
 
-def mark_as_read(name,categories=[]):
+def mark_as_read(name,categories=[]): #FIXME: Change this as last_read.
     if name != None and feeds[name.upper()] != None:
         feeds[name.upper()]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     else:
