@@ -8,6 +8,7 @@ import subprocess as sp
 import time
 import schedule
 import os
+import tempfile
 
 from output_helper import OutputHelper
 from cache_helper import CacheHelper
@@ -101,7 +102,13 @@ def read_updates(name,categories=[]):
         s = cache.load_from_cache(name)
         url = feeds[name.upper()]["url"]
         output.write_feed_header(f"----[{name.upper()} - {url}]----")
-        print_entries(s,lastread)
+        text = grab_entries(name,url,s,lastread)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp,"rssentries")
+            with open(path,"w") as o:
+                o.write(text)
+            sp.call(['less','-R',path])
+        
         feeds[name.upper()]["last_read"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         feeds[name.upper()]["unread"] = 0
     else:
@@ -109,27 +116,30 @@ def read_updates(name,categories=[]):
             lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
         else:
             lst = feeds
+        text = ""
         for n in lst:
             lastread = datetime.strptime(feeds[n]["last_read"],'%Y-%m-%d %H:%M:%S')
             s = cache.load_from_cache(n)
             url = feeds[n]["url"]
-            output.write_feed_header(f"----[{n.upper()} - {url}]----")
-            print_entries(s,lastread)
+            text += grab_entries(n,url,s,lastread)
             feeds[n]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
             feeds[n]["unread"] = 0
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp,"rssentries")
+            with open(path,"w") as o:
+                o.write(text)
+            sp.call(['less','-R',path])
     save_feed_file()
-        
-def print_entries(feed,lastread):
+
+def grab_entries(name,url,feed,lastread):
+    s = output.write_feed_header(f"----[{name.upper()} - {url}]----") + "\n"
     for e in feed.entries:
-        p_date = datetime.fromtimestamp(time.mktime(time.struct_time(e["published_parsed"])))
-        descriptionsoup = BeautifulSoup(e["summary"],'html.parser')
+        p_date = datetime.fromtimestamp(time.mktime(time.struct_time(e["published_parsed"])))  
+        desc = BeautifulSoup(e["summary"],'html.parser')
         new = True if p_date > lastread else False
-        output.write_feed_entry(e["title"],new)
-        output.write_feed_link(e["link"])
-        output.write_feed_description(descriptionsoup.get_text(),new)
-        output.write_info(e["published"])
-        print('\n')       
-        
+        s += output.format_entry(name,e,desc.get_text(),new)
+    return s              
+
 def show_feeds(categories = []):
     if len(categories) > 0:
         lst= [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
