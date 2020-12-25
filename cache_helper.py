@@ -64,9 +64,23 @@ class CacheHelper():
             return self.load_from_cache(name) #We just automatically return the cached file.
         #If not, we proceed:
         result = feedparser.parse(feed["url"],etag=etag,modified=modified) if force_refresh == False else feedparser.parse(feed["url"])
-        if result.status == 304:
-            #No changes: return cached file.
-            print("no changes")
+
+        if result.status == 410: #Feed deleted.
+            if to_console:
+                self.output.write_error("This feed has been deleted from the server and will no longer be fetched. Please run remove to remove it from your list.")
+            else:
+                sp.call(['notify-send',name,"[ERROR] This feed has been deleted from the server and will no longer be fetched."])
+            feed["valid"] = False
+            return
+
+        elif result.status == 301: #Permanent redirect
+            new_url = result.href
+            if to_console:
+                self.output.write_info(f"This feed has been moved! URL has been updated to {new_url}. Please try updating again.")
+            feed["url"] = new_url
+            return
+
+        elif result.status == 304: #No changes: return cached file.
             i = feed["unread"]
             if to_console:
                 print(f"{name}: {i} unread")
@@ -74,14 +88,12 @@ class CacheHelper():
                 sp.call(['notify-send',name,f"{i} unread"])                
             return self.load_from_cache(name)
         
-        elif result.status == 200:
-            #Something changed.
-            print("something changed")
+        elif result.status == 200 or result.status == 302: #Either the web updated or it updated and it's a temporary redirect.
             etag = result.etag if hasattr(result,'etag') else ""
             modified = result.modified if hasattr(result,'modified') else ""
             feed["etag"] = etag
             feed["last-modified"] = modified
-            i = 0
+            i = feed["unread"]
             for e in result.entries:
                 p_date = datetime.fromtimestamp(time.mktime(e.published_parsed))
                 if p_date > last_check: #If newer.

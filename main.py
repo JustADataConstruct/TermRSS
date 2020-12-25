@@ -59,7 +59,8 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'categories':categories,
         'etag':etag,
         'last-modified':modified,
-        'unread':len(f.entries)
+        'unread':len(f.entries),
+        'valid':True
     }
     save_feed_file()
     cache.save_cache_file(feedname,f)
@@ -83,6 +84,12 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
     else:
         lst = feeds
     for n in lst:
+        if feeds[n]["valid"] == False:
+            if to_console:
+                output.write_error(f"{n} is no longer valid and will not be updated. Please remove it from your list.")
+            else:
+                sp.call(['notify-send',n,f"Invalid feed."])
+            continue
         last_check = datetime.strptime(feeds[n]["last_check"],'%Y-%m-%d %H:%M:%S')
         cache.check_cache_valid(n,feeds[n],last_check,to_console,force_refresh)
         feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
