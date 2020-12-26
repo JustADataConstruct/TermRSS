@@ -1,0 +1,7 @@
+beautifulsoup4==4.9.3
+colorama==0.4.4
+feedparser==6.0.2
+listparser==0.18
+schedule==0.6.0
+sgmllib3k==1.0.0
+soupsieve==2.1
