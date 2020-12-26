@@ -102,7 +102,13 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
 def read_updates(name,categories=[]): 
     if name != None and feeds[name.upper()] != None:
         lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
-        s = cache.load_from_cache(name)
+        try:
+            s = cache.load_from_cache(name)
+        except FileNotFoundError:
+            output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
+            return
+        except KeyError:
+            output.write_error(f"Can't find feed {name} in cache file. Run update -r to regenerate it.")
         url = feeds[name.upper()]["url"]
         output.write_feed_header(f"----[{name.upper()} - {url}]----")
         text = grab_entries(name,url,s,lastread)
@@ -122,7 +128,14 @@ def read_updates(name,categories=[]):
         text = ""
         for n in lst:
             lastread = datetime.strptime(feeds[n]["last_read"],'%Y-%m-%d %H:%M:%S')
-            s = cache.load_from_cache(n)
+            try:
+                s = cache.load_from_cache(n)
+            except FileNotFoundError:
+                output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
+                return
+            except KeyError:
+                output.write_error(f"Can't find feed {n} in cache file. Run update -r to regenerate it.")
+                return
             url = feeds[n]["url"]
             text += grab_entries(n,url,s,lastread)
             feeds[n]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    

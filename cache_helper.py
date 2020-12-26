@@ -28,15 +28,12 @@ class CacheHelper():
         f.close()
 
     def load_from_cache(self,feedname):
-        try:
-            with open('rsscache.json') as f:
-                s = json.loads(f.read())[feedname.upper()]
-                f.close()
-            feed = FeedParserDict(s) #FIXME: Do we actually need this?
-            return feed
-        except Exception as e:
-            self.output.write_error(e)
-            return None
+        with open('rsscache.json') as f:
+            s = json.loads(f.read())[feedname.upper()]
+            f.close()
+        feed = FeedParserDict(s) #FIXME: Do we actually need this?
+        return feed
+
 
     def remove_from_cache(self,feedname):
         try:
