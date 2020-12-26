@@ -31,6 +31,7 @@ class OutputHelper():
     def write_feed_description(self,msg,is_new=False):
         if self.color:
             if is_new == False:
+                msg = msg.replace("\n","") #The color formatting breaks if we don't do this.
                 msg = colorama.Style.DIM + msg
         return msg + "\n"
 
