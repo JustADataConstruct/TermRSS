@@ -65,7 +65,10 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'valid':True
     }
     if f.bozo == 1:
-        output.write_error(f"A problem was detected with your feed:{f.bozo_exception}. It was added, but you may find problems when reading its entries.")
+        output.write_error(f"A problem was detected with your feed:{f.bozo_exception}. You may find problems when reading its entries. Do you want to add it? [Y]es/[N]o")
+        answer = input()
+        if answer.lower() == "n" or answer.lower() == "no":
+            return
         
     save_feed_file()
     cache.save_cache_file(feedname,f)
