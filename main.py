@@ -13,11 +13,6 @@ import tempfile
 from output_helper import OutputHelper
 from cache_helper import CacheHelper
 
-#TODO:
-# Autodetect feed from url.
-# Windows support? Pack into exe?
-# Set update frequency for each feed?
-
 feeds = {}
 config = {}
 
@@ -37,14 +32,25 @@ cache = CacheHelper(output,config)
 verbose = config["verbose_mode"]
 
 def save_feed_file():
+    """Saves changes made to the feeds dictionary to the feedinfo.json file.
+    """
     if verbose:print("Trying to save file...")
     f = open('feedinfo.json','w')
-    s = json.dumps(feeds)
+    s = json.dumps(feeds,indent=4)
     f.write(s)
     if verbose:print("Saved.")
     f.close()
 
 def add_feed(feedname,feedURL,categories=[],force=False):
+    """Adds a new feed to the feeds dictionary and saves it to file. Handles errors and
+    restarting the updater.
+
+    Args:
+        feedname (string): Name to identify the feed.
+        feedURL (string): The URL of the feed.
+        categories (list of strings, optional): A string of categories separated by comma. Defaults to [].
+        force (bool, optional): If True, will add the feed even if entries can't be detected. Defaults to False.
+    """
     if feedURL.startswith(('http://','https://')) == False:
         if verbose:print("Checking if url has prefix...")        
         feedURL = "http://" + feedURL
@@ -85,6 +91,12 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         start_background_updater(True)
 
 def remove_feed(feedname):
+    """Removes a feed from the feeds dictionary, removes that feed from the cache file, and
+    saves the changes to disl.
+
+    Args:
+        feedname (string): Name of the feed to remove.
+    """
     if feeds[feedname.upper()] !=None:
         if verbose:print("Feed exists, removing.")
         feeds.pop(feedname.upper())
@@ -92,6 +104,16 @@ def remove_feed(feedname):
         cache.remove_from_cache(feedname)
 
 def check_new_entries(to_console=True,categories=[],force_refresh=False):
+    """Tries to fetch new entries from the server. Calls check_cache_valid to handle the actual
+    fetching and getting the latest version.
+
+    Args:
+        to_console (bool, optional): If true, will output to terminal. False when using the
+        background process.. Defaults to True.
+        categories (ist of strings, optional): String with a list of categories, separated by comma.. Defaults to [].
+        force_refresh (bool, optional): If true, will tell check_cache_valid to download
+        from the server even if there are no changes.. Defaults to False.
+    """
     if to_console:
         output.write_info("Checking for new entries...")
     if len(categories) > 0:
@@ -113,6 +135,15 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
         save_feed_file()
 
 def read_updates(name,all = False,categories=[]): 
+    """Grabs entries from cache and outputs them via the less command.
+
+    Args:
+        name (string): Name of the feed that wants to be read. If none, grabs all updated unless
+        categories is not empty.
+        all (bool, optional): If True, shows all feeds (categorized or existing). Defaults to False.
+        categories (list of strings, optional): String with a list of categories separated
+        by comma. Defaults to [].
+    """
     text = ""
     if name != None and feeds[name.upper()] != None:
         if verbose:print("Trying to load from cache...")
@@ -144,6 +175,15 @@ def read_updates(name,all = False,categories=[]):
     save_feed_file()
 
 def grab_entries(name,feed):
+    """Returns a string with the feed's entries in a nice format.
+
+    Args:
+        name (string): Name of the feed.
+        feed (dictionary): Actual feed object
+
+    Returns:
+        string: All entries requested.
+    """
     lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S') 
     url = feeds[name.upper()]["url"]
     s = output.write_feed_header(f"----[{name.upper()} - {url}]----") + "\n"    
@@ -159,6 +199,12 @@ def grab_entries(name,feed):
     return s              
 
 def show_feeds(categories = []):
+    """Outputs information from saved feeds.
+
+    Args:
+        categories (list of strings, optional): List of categories, separated by
+        comma. If present, filters the result. Defaults to [].
+    """
     if len(categories) > 0:
         lst= [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
     else:
@@ -169,14 +215,22 @@ def show_feeds(categories = []):
         last_read = feeds[n]["last_read"]
         unread = feeds[n]["unread"]
         valid = feeds[n]["valid"]
+        categories = feeds[n]["categories"]
         output.write_info(f"{n}: {url}")
         print(f"Last checked: {last_checked}. Last read: {last_read}")
         print(f"Unread entries: {unread}")
+        print(f"Categories: {categories}")
         if valid== False:
             output.write_error("WARNING: This feed is no longer valid and will not be updated.")
         print("\n")
 
 def import_feeds(source):
+    """Tries to parse and import an opml file exported from another RSS reader. Will try
+    to keep name and categories.
+
+    Args:
+        source (string): Path of the opml file.
+    """
     result = listparser.parse(source)
     name = result.meta.title
     size = len(result.feeds)
@@ -201,6 +255,13 @@ def import_feeds(source):
             output.write_ok("Feeds imported successfully.")
 
 def mark_as_read(name,categories=[]):
+    """Will update the last_read and unread properties of each feed to set them up to date and
+    restart the background updater.
+
+    Args:
+        name (string): Name of the feed that wants to be cleared. If none, will apply to all feeds.
+        categories (list of strings, optional): If present, will filter results.. Defaults to [].
+    """
     if name != None and feeds[name.upper()] != None:
         feed = feeds[name.upper()]
         feed["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -221,6 +282,12 @@ def mark_as_read(name,categories=[]):
 
 
 def start_background_updater(silent=False):
+    """Will create the rssclient.pid file and start the background process. Time is configurable on the
+    config.json file.
+
+    Args:
+        silent (bool, optional): [If True, will not print to terminal the status messages]. Defaults to False.
+    """
     if verbose:print("Trying to start updater...")
     proc = sp.Popen(["python","main.py","show","--bg"])
     w = open("rssclient.pid","w")
@@ -230,7 +297,13 @@ def start_background_updater(silent=False):
     if silent == False:
         if verbose:print("Done")
         output.write_ok(f"Background updater started successfully. Will check for new entries every {time} minute(s)")
+
 def stop_background_updater(silent=False):
+    """Will try to remove the rssclient.pid file and stop the background process.
+
+    Args:
+        silent (bool, optional): If True, will not print to terminal the status messages.. Defaults to False.
+    """
     with open('rssclient.pid') as f:
         pid = f.read()
         os.kill(int(pid),9)
@@ -251,28 +324,19 @@ except IOError as e:
     add_feed("Sample feed","https://www.feedforall.com/sample.xml","Test")
 
 
-parser = argparse.ArgumentParser()
+parser = argparse.ArgumentParser(add_help=False,usage="Run main.py help to read the manual.")
 
-#TODO: Better help (a man page?)
-s = "Add: Add a new feed to your list.\
-    Remove: Remove a feed from your list.\
-    Show: View all feeds on your list.\
-    Update: Check for new updates on your feeds.\
-    Read: Read the latest updates.\
-    Start/Stop:Start or stop the background updater\
-    Import: Import feeds from an opml file.\
-    Clear: Mark your feeds as read."
 
-parser.add_argument("command",help=s,choices=['update','read','add','remove','show','start','stop','import','clear']) #FIXME: Update help
-parser.add_argument("-n","--name",help="Name of the feed you want to add/remove")
-parser.add_argument("-u","--url",help="Url of the feed you want to add.")
+parser.add_argument("command",choices=['help','update','read','add','remove','show','start','stop','import','clear'])
+parser.add_argument("-n","--name")
+parser.add_argument("-u","--url")
 
 #Flags
-parser.add_argument("-r","--refresh",help="When calling update, force to call the server, even if there has been no changes.",action='store_true')
-parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
-parser.add_argument("-c","--categories",help="When adding a feed, list of categories, separated by comma.")
-parser.add_argument("-f","--force-add",help="Force add a fedd to your list, even if it has no entries.",action="store_true")
-parser.add_argument("-a","--all",help="When reading all feeds, show every entry instead of just the newer ones.",action="store_true")
+parser.add_argument("-r","--refresh",action='store_true')
+parser.add_argument("--bg",action="store_true")
+parser.add_argument("-c","--categories")
+parser.add_argument("-f","--force-add",action="store_true")
+parser.add_argument("-a","--all",action="store_true")
 
 args = parser.parse_args()
 
@@ -326,6 +390,8 @@ if args.command != None:
             print("Usage: main.py import -u [OPML URL OR LOCAL PATH]")
         else:
             import_feeds(args.url)
+    elif args.command.lower() == "help":
+        sp.call(['less','-R',"README.md"])        
     else:
         parser.print_help()
 else:

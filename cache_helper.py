@@ -25,8 +25,8 @@ class CacheHelper():
             cache = {}
         cache[feedname.upper()] = feed_content
         if self.verbose:print("Writing cache file.")
-        f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this? Does it scale well?
-        f.write(json.dumps(cache,default=str))
+        f = open('rsscache.json','w')
+        f.write(json.dumps(cache,default=str,indent=4))
         f.close()
 
     def load_from_cache(self,feedname):
@@ -50,7 +50,7 @@ class CacheHelper():
             if cache[feedname.upper()] != None:
                 cache.pop(feedname.upper())
                 with open('rsscache.json','w') as f:
-                    f.write(json.dumps(cache))
+                    f.write(json.dumps(cache,indent=4))
         except Exception as e:
             self.output.write_error(e)
    
