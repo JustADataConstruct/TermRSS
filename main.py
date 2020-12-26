@@ -42,6 +42,8 @@ def save_feed_file():
     f.close()
 
 def add_feed(feedname,feedURL,categories=[],force=False):
+    if feedURL.startswith(('http://','https://')) == False:
+        feedURL = "http://" + feedURL
     try:
         f = feedparser.parse(feedURL)
     except Exception as e:
