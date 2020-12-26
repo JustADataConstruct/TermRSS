@@ -30,9 +30,16 @@ class CacheHelper():
         f.close()
 
     def load_from_cache(self,feedname):
-        with open('rsscache.json') as f:
-            if self.verbose:print("Loading from cache")
-            s = json.loads(f.read())[feedname.upper()]
+        try:
+            with open('rsscache.json') as f:
+                if self.verbose:print("Loading from cache")
+                s = json.loads(f.read())[feedname.upper()]
+        except FileNotFoundError:
+            self.output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
+            return None
+        except KeyError:
+            self.output.write_error(f"Can't find feed {feedname} in cache file. Run update -r to regenerate it.")
+            return None
         return s
 
 

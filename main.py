@@ -113,29 +113,12 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
         save_feed_file()
 
 def read_updates(name,all = False,categories=[]): 
+    text = ""
     if name != None and feeds[name.upper()] != None:
-        lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
-        try:
-            if verbose:print("Trying to load from cache...")
-            s = cache.load_from_cache(name)
-        except FileNotFoundError:
-            output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
-            return
-        except KeyError:
-            output.write_error(f"Can't find feed {name} in cache file. Run update -r to regenerate it.")
-        url = feeds[name.upper()]["url"]
-        output.write_feed_header(f"----[{name.upper()} - {url}]----")
-        text = grab_entries(name,url,s,lastread)
-        text = text + "\n['Q' to exit]"
-        with tempfile.TemporaryDirectory() as tmp:
-            if verbose:print("Calling less")
-            path = os.path.join(tmp,"rssentries")
-            with open(path,"w") as o:
-                o.write(text)
-            sp.call(['less','-R',path])
-        
-        feeds[name.upper()]["last_read"]= datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        feeds[name.upper()]["unread"] = 0
+        if verbose:print("Trying to load from cache...")
+        s = cache.load_from_cache(name)
+        if s == None: return
+        text = grab_entries(name,s)
     else:
         if len(categories) > 0:
             lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
@@ -143,42 +126,36 @@ def read_updates(name,all = False,categories=[]):
         else:
             lst = feeds
             if verbose:print("Using main feed list...")
-        text = ""
         if all == False:
             lst = [x for x in lst if feeds[x]["unread"] > 0]
             if len(lst) == 0:
                 text = "No new entries on any feed. Run read -a to see all past entries."
         for n in lst:
-            lastread = datetime.strptime(feeds[n]["last_read"],'%Y-%m-%d %H:%M:%S')
-            try:
-                s = cache.load_from_cache(n)
-            except FileNotFoundError:
-                output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
-                return
-            except KeyError:
-                output.write_error(f"Can't find feed {n} in cache file. Run update -r to regenerate it.")
-                return
-            url = feeds[n]["url"]
-            text += grab_entries(n,url,s,lastread)
-            feeds[n]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
-            feeds[n]["unread"] = 0
-        text += "\n['Q' to exit]"
-        with tempfile.TemporaryDirectory() as tmp:
-            if verbose:print("Calling less")
-            path = os.path.join(tmp,"rssentries")
-            with open(path,"w") as o:
-                o.write(text)
-            sp.call(['less','-R',path])
+            s = cache.load_from_cache(n)
+            if s == None: return
+            text += grab_entries(n,s)
+    text += "\n['Q' to exit]"
+    with tempfile.TemporaryDirectory() as tmp:
+        if verbose:print("Calling less")
+        path = os.path.join(tmp,"rssentries")
+        with open(path,"w") as o:
+            o.write(text)
+        sp.call(['less','-R',path])
     save_feed_file()
 
-def grab_entries(name,url,feed,lastread):
+def grab_entries(name,feed):
+    lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S') 
+    url = feeds[name.upper()]["url"]
+    s = output.write_feed_header(f"----[{name.upper()} - {url}]----") + "\n"    
+
     if verbose:print("Grabbing entries...")
-    s = output.write_feed_header(f"----[{name.upper()} - {url}]----") + "\n"
     for e in feed["entries"]:
         p_date = datetime.fromtimestamp(time.mktime(time.struct_time(e["published_parsed"])))  
         desc = BeautifulSoup(e["summary"],'html.parser')
         new = True if p_date > lastread else False
         s += output.format_entry(name,e,desc.get_text(),new)
+    feed["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
+    feed["unread"] = 0
     return s              
 
 def show_feeds(categories = []):
