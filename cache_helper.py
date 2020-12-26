@@ -31,7 +31,7 @@ class CacheHelper():
         with open('rsscache.json') as f:
             s = json.loads(f.read())[feedname.upper()]
             f.close()
-        feed = FeedParserDict(s) #FIXME: Do we actually need this?
+        feed = FeedParserDict(s) #FIXME: Do we actually need this? We are always loading from cache.
         return feed
 
 
@@ -46,7 +46,7 @@ class CacheHelper():
         except Exception as e:
             self.output.write_error(e)
    
-    def check_cache_valid(self,name,feed,last_check,to_console,force_refresh): #FIXME: Why are we returning? We aren't using it for anything.
+    def check_cache_valid(self,name,feed,last_check,to_console,force_refresh):
         etag = feed["etag"]
         modified = feed["last-modified"]
         diff = datetime.now() - last_check
@@ -58,7 +58,7 @@ class CacheHelper():
             else:
                 if i > 0:
                     sp.call(['notify-send',name,f"{i} unread"])            
-            return self.load_from_cache(name) #We just automatically return the cached file.
+            return
         #If not, we proceed:
         result = feedparser.parse(feed["url"],etag=etag,modified=modified) if force_refresh == False else feedparser.parse(feed["url"])
 
@@ -84,13 +84,13 @@ class CacheHelper():
             feed["url"] = new_url
             return
 
-        elif result.status == 304: #No changes: return cached file.
+        elif result.status == 304: #No changes
             i = feed["unread"]
             if to_console:
                 print(f"{name}: {i} unread")
             else:
                 sp.call(['notify-send',name,f"{i} unread"])                
-            return self.load_from_cache(name)
+            return
         
         elif result.status == 200 or result.status == 302: #Either the web updated or it updated and it's a temporary redirect.
             etag = result.etag if hasattr(result,'etag') else ""
@@ -109,4 +109,4 @@ class CacheHelper():
                     sp.call(['notify-send',name,f"{i} updates(s)"])      
             feed["unread"] = i     
             self.save_cache_file(name,result)
-            return result
+            return
