@@ -194,8 +194,8 @@ def grab_entries(name,feed):
         desc = BeautifulSoup(e["summary"],'html.parser')
         new = True if p_date > lastread else False
         s += output.format_entry(name,e,desc.get_text(),new)
-    feed["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
-    feed["unread"] = 0
+    feeds[name]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
+    feeds[name]["unread"] = 0
     return s              
 
 def show_feeds(categories = []):
