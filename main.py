@@ -14,7 +14,6 @@ from output_helper import OutputHelper
 from cache_helper import CacheHelper
 
 #TODO:
-# An HTML export to see entries in a prettier way?
 # Autodetect feed from url.
 # Windows support? Pack into exe?
 # Set update frequency for each feed?
@@ -101,7 +100,7 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
         feeds[n]["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         save_feed_file()
 
-def read_updates(name,categories=[]): 
+def read_updates(name,all = False,categories=[]): 
     if name != None and feeds[name.upper()] != None:
         lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
         try:
@@ -114,6 +113,7 @@ def read_updates(name,categories=[]):
         url = feeds[name.upper()]["url"]
         output.write_feed_header(f"----[{name.upper()} - {url}]----")
         text = grab_entries(name,url,s,lastread)
+        text = text + "\n['Q' to exit]"
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp,"rssentries")
             with open(path,"w") as o:
@@ -128,6 +128,10 @@ def read_updates(name,categories=[]):
         else:
             lst = feeds
         text = ""
+        if all == False:
+            lst = [x for x in lst if feeds[x]["unread"] > 0]
+            if len(lst) == 0:
+                text = "No new entries on any feed. Run read -a to see all past entries."
         for n in lst:
             lastread = datetime.strptime(feeds[n]["last_read"],'%Y-%m-%d %H:%M:%S')
             try:
@@ -142,6 +146,7 @@ def read_updates(name,categories=[]):
             text += grab_entries(n,url,s,lastread)
             feeds[n]["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')    
             feeds[n]["unread"] = 0
+        text += "\n['Q' to exit]"
         with tempfile.TemporaryDirectory() as tmp:
             path = os.path.join(tmp,"rssentries")
             with open(path,"w") as o:
@@ -198,7 +203,7 @@ def import_feeds(source):
         finally:
             output.write_ok("Feeds imported successfully.")
 
-def mark_as_read(name,categories=[]): #FIXME: Change this as last_read.
+def mark_as_read(name,categories=[]):
     if name != None and feeds[name.upper()] != None:
         feed = feeds[name.upper()]
         feed["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -210,7 +215,7 @@ def mark_as_read(name,categories=[]): #FIXME: Change this as last_read.
             lst = feeds
         for f in lst:
             feed = feeds[f]
-            feed["last_check"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            feed["last_read"] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             feed["unread"] = 0
     save_feed_file()
     if is_updater_running():
@@ -270,6 +275,7 @@ parser.add_argument("-r","--refresh",help="When calling update, force to call th
 parser.add_argument("--bg",help="System flag to start the background updater. Do not use.",action="store_true")
 parser.add_argument("-c","--categories",help="When adding a feed, list of categories, separated by comma.")
 parser.add_argument("-f","--force-add",help="Force add a fedd to your list, even if it has no entries.",action="store_true")
+parser.add_argument("-a","--all",help="When reading all feeds, show every entry instead of just the newer ones.",action="store_true")
 
 args = parser.parse_args()
 
@@ -301,7 +307,7 @@ if args.command != None:
     elif args.command.lower() == "update":
         check_new_entries(True,categories,args.refresh)
     elif args.command.lower() == "read":
-        read_updates(args.name,categories)
+        read_updates(args.name,args.all,categories)
     elif args.command.lower() == "clear":
         mark_as_read(args.name,categories)
         output.write_ok("Feeds cleared!")
