@@ -162,7 +162,17 @@ def show_feeds(categories = []):
     else:
         lst = feeds
     for n in lst:
-         print(f"{n} : {feeds[n]}")
+        url = feeds[n]["url"]
+        last_checked = feeds[n]["last_check"]
+        last_read = feeds[n]["last_read"]
+        unread = feeds[n]["unread"]
+        valid = feeds[n]["valid"]
+        output.write_info(f"{n}: {url}")
+        print(f"Last checked: {last_checked}. Last read: {last_read}")
+        print(f"Unread entries: {unread}")
+        if valid== False:
+            output.write_error("WARNING: This feed is no longer valid and will not be updated.")
+        print("\n")
 
 def import_feeds(source):
     result = listparser.parse(source)
