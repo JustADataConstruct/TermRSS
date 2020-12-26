@@ -31,8 +31,7 @@ class CacheHelper():
         with open('rsscache.json') as f:
             s = json.loads(f.read())[feedname.upper()]
             f.close()
-        feed = FeedParserDict(s) #FIXME: Do we actually need this? We are always loading from cache.
-        return feed
+        return s
 
 
     def remove_from_cache(self,feedname):

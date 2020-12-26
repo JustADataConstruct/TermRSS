@@ -159,7 +159,7 @@ def read_updates(name,all = False,categories=[]):
 
 def grab_entries(name,url,feed,lastread):
     s = output.write_feed_header(f"----[{name.upper()} - {url}]----") + "\n"
-    for e in feed.entries:
+    for e in feed["entries"]:
         p_date = datetime.fromtimestamp(time.mktime(time.struct_time(e["published_parsed"])))  
         desc = BeautifulSoup(e["summary"],'html.parser')
         new = True if p_date > lastread else False
