@@ -24,7 +24,7 @@ class CacheHelper():
             cache = {}
         cache[feedname.upper()] = feed_content
         f = open('rsscache.json','w') #TODO: Is a json file the best way of doing this? Does it scale well?
-        f.write(json.dumps(cache))
+        f.write(json.dumps(cache,default=str))
         f.close()
 
     def load_from_cache(self,feedname):

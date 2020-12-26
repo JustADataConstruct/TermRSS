@@ -7,11 +7,6 @@ class OutputHelper():
             colorama.init(autoreset=True)
 
     def format_entry(self,name,entry,desc,new):
-        # s = s + e["title"] + "\n"
-        # s = s + e["link"] + "\n"
-        # #s = s + descriptionsoup.get_text() + "\n"
-        # s = s + e["published"] + "\n\n"
-
         s = self.write_feed_entry(entry["title"],new)
 
         s = s + self.write_feed_link(entry["link"])

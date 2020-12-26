@@ -63,6 +63,9 @@ def add_feed(feedname,feedURL,categories=[],force=False):
         'unread':len(f.entries),
         'valid':True
     }
+    if f.bozo == 1:
+        output.write_error(f"A problem was detected with your feed:{f.bozo_exception}. It was added, but you may find problems when reading its entries.")
+        
     save_feed_file()
     cache.save_cache_file(feedname,f)
     output.write_ok(f"Feed {feedname} added!") 
