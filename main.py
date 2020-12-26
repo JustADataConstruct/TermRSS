@@ -25,25 +25,31 @@ try :
     with open('config.json') as f:
         s = f.read()
         config = json.loads(s)
-        f.close()
 except IOError as e:
     print("Config file not found. Going back to defaults.")
     config["update_time_minutes"] = 10
     config["enable_color_output"] = True
+    config["verbose_mode"] = False
 
 output = OutputHelper(config["enable_color_output"])
 cache = CacheHelper(output,config)
 
+verbose = config["verbose_mode"]
+
 def save_feed_file():
+    if verbose:print("Trying to save file...")
     f = open('feedinfo.json','w')
     s = json.dumps(feeds)
     f.write(s)
+    if verbose:print("Saved.")
     f.close()
 
 def add_feed(feedname,feedURL,categories=[],force=False):
     if feedURL.startswith(('http://','https://')) == False:
+        if verbose:print("Checking if url has prefix...")        
         feedURL = "http://" + feedURL
     try:
+        if verbose:print("Trying to parse feed...")
         f = feedparser.parse(feedURL)
     except Exception as e:
         output.write_error(f"Something went wrong when trying to parse this feed ({feedname}): {e}")
@@ -80,6 +86,7 @@ def add_feed(feedname,feedURL,categories=[],force=False):
 
 def remove_feed(feedname):
     if feeds[feedname.upper()] !=None:
+        if verbose:print("Feed exists, removing.")
         feeds.pop(feedname.upper())
         save_feed_file()
         cache.remove_from_cache(feedname)
@@ -89,8 +96,10 @@ def check_new_entries(to_console=True,categories=[],force_refresh=False):
         output.write_info("Checking for new entries...")
     if len(categories) > 0:
         lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+        if verbose:print("Filtering categories...")
     else:
         lst = feeds
+        if verbose:print("Using main feed list.")
     for n in lst:
         if feeds[n]["valid"] == False:
             if to_console:
@@ -107,6 +116,7 @@ def read_updates(name,all = False,categories=[]):
     if name != None and feeds[name.upper()] != None:
         lastread = datetime.strptime(feeds[name.upper()]["last_read"],'%Y-%m-%d %H:%M:%S')
         try:
+            if verbose:print("Trying to load from cache...")
             s = cache.load_from_cache(name)
         except FileNotFoundError:
             output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
@@ -118,6 +128,7 @@ def read_updates(name,all = False,categories=[]):
         text = grab_entries(name,url,s,lastread)
         text = text + "\n['Q' to exit]"
         with tempfile.TemporaryDirectory() as tmp:
+            if verbose:print("Calling less")
             path = os.path.join(tmp,"rssentries")
             with open(path,"w") as o:
                 o.write(text)
@@ -128,8 +139,10 @@ def read_updates(name,all = False,categories=[]):
     else:
         if len(categories) > 0:
             lst = [x for x in feeds if any(item in categories for item in feeds[x]["categories"])]
+            if verbose:print("Filtering categories...")
         else:
             lst = feeds
+            if verbose:print("Using main feed list...")
         text = ""
         if all == False:
             lst = [x for x in lst if feeds[x]["unread"] > 0]
@@ -151,6 +164,7 @@ def read_updates(name,all = False,categories=[]):
             feeds[n]["unread"] = 0
         text += "\n['Q' to exit]"
         with tempfile.TemporaryDirectory() as tmp:
+            if verbose:print("Calling less")
             path = os.path.join(tmp,"rssentries")
             with open(path,"w") as o:
                 o.write(text)
@@ -158,6 +172,7 @@ def read_updates(name,all = False,categories=[]):
     save_feed_file()
 
 def grab_entries(name,url,feed,lastread):
+    if verbose:print("Grabbing entries...")
     s = output.write_feed_header(f"----[{name.upper()} - {url}]----") + "\n"
     for e in feed["entries"]:
         p_date = datetime.fromtimestamp(time.mktime(time.struct_time(e["published_parsed"])))  
@@ -196,7 +211,9 @@ def import_feeds(source):
     elif answer.lower() == "y" or answer.lower() == "yes":
         try:
             for i in result.feeds:
+                if verbose:print(f"Trying to add {i.title}")
                 if len(i.categories) > 0:
+                    if verbose:print("Grabbing categories")
                     categories = i.categories[0]
                 else:
                     categories = []
@@ -227,18 +244,19 @@ def mark_as_read(name,categories=[]):
 
 
 def start_background_updater(silent=False):
+    if verbose:print("Trying to start updater...")
     proc = sp.Popen(["python","main.py","show","--bg"])
     w = open("rssclient.pid","w")
     w.write(str(proc.pid))
     w.close()
     time = config["update_time_minutes"]
     if silent == False:
+        if verbose:print("Done")
         output.write_ok(f"Background updater started successfully. Will check for new entries every {time} minute(s)")
 def stop_background_updater(silent=False):
     with open('rssclient.pid') as f:
         pid = f.read()
         os.kill(int(pid),9)
-        f.close()
     os.remove('rssclient.pid')
     if silent == False:
         output.write_ok("Background updater stopped successfully.")
@@ -250,7 +268,6 @@ try:
     with open('feedinfo.json') as f:
         s = f.read()
         feeds = json.loads(s)
-        f.close()
 except IOError as e:
     output.write_error("Feedinfo not found! Recreating it now.")
     initdate = str(datetime(1960,1,1,0,0,0))
