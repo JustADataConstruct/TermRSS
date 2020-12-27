@@ -44,7 +44,9 @@ View all of the feeds in your list, the last time they were checked for new entr
 
     termrss.py update [-c CATEGORIES] [-r]
 Checks all of your feeds for any new updates since last time you ran this command. If it has been too soon since your last check (configurable on 'config.json') or the server doesn't return any changes since your last check, it will keep in cache the results of the last time there was an update and return the number of unread entries on the saved version. Otherwise, it updates the saved results and returns the number of updates.
+
 -c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
+
 -r :Refresh flag. Add this to force the program to download results from the server, even if there are no changes from the saved version. Use this if your cache is missing or damaged.
 ### Read entries
 
