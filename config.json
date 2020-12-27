@@ -1,5 +1,5 @@
 {
-    "update_time_minutes" : 10,
-    "enable_color_output" : true,
-    "verbose_mode":false
+    "update_time_minutes": 10,
+    "enable_color_output": true,
+    "verbose_mode": false
 }

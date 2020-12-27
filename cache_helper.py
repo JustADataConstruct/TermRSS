@@ -59,7 +59,7 @@ class CacheHelper():
                 if self.verbose:print("Loading from cache")
                 s = json.loads(f.read())[feedname.upper()]
         except FileNotFoundError:
-            self.output.write_error("Cache file not found! Force an update (main.py update -r) to regenerate it.")
+            self.output.write_error("Cache file not found! Force an update (termrss.py update -r) to regenerate it.")
             return None
         except KeyError:
             self.output.write_error(f"Can't find feed {feedname} in cache file. Run update -r to regenerate it.")

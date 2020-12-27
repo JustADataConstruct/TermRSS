@@ -1,8 +1,9 @@
-# RSSClient
-A RSS Reader/Notifier in Python with notification support using FeedParser
-WIP.
+# TermRSS
+A CLI RSS Reader/Notifier in Python with notification support using FeedParser.
+Currently supports Linux only. A Windows version is on the works. 
+Made in a week as a hobby project. Pull requests are welcome.
 
-- [RSSClient](#rssclient)
+- [TermRSS](#termrss)
   - [Usage](#usage)
     - [Add new feeds](#add-new-feeds)
     - [Remove a feed](#remove-a-feed)
@@ -19,7 +20,7 @@ WIP.
 
 ### Add new feeds
 
-    main.py add -n NAME -u URL [-c CATEGORIES] [-f]
+    termrss.py add -n NAME -u URL [-c CATEGORIES] [-f]
   
 
  - Name: ID you want for this feed.
@@ -28,24 +29,24 @@ WIP.
  - -f (optional): By default, the program will not add a feed to your list if it can't detect any entries published. You can bypass this by adding this flag when running the command.
 ### Remove a feed
 
-    main.py remove -n NAME
+    termrss.py remove -n NAME
 
  - Name: The ID of the feed you want to remove from your list.
 
 ### View all your feeds
 
-    main.py show [-c CATEGORIES]
+    termrss.py show [-c CATEGORIES]
 View all of the feeds in your list, the last time they were checked for new entries, and their list of categories.
 -c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
 ### Update your feeds
 
-    main.py update [-c CATEGORIES] [-r]
+    termrss.py update [-c CATEGORIES] [-r]
 Checks all of your feeds for any new updates since last time you ran this command. If it has been too soon since your last check (configurable on 'config.json') or the server doesn't return any changes since your last check, it will keep in cache the results of the last time there was an update and return the number of unread entries on the saved version. Otherwise, it updates the saved results and returns the number of updates.
 -c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
 -r :Refresh flag. Add this to force the program to download results from the server, even if there are no changes from the saved version. Use this if your cache is missing or damaged.
 ### Read entries
 
-    main.py read [-n NAME] [-a] [-c CATEGORIES]
+    termrss.py read [-n NAME] [-a] [-c CATEGORIES]
 If you run it without a name, will return (via 'less') entries from each one of your feeds (or each one of your feeds which are marked with the indicated categories) with unread entries. If you indicate a name, will return each entry from that feed, marking the newer ones.
 
  - Name (optional): ID of the feed you want to read. If it's not present, will return the updated entries of all feeds.
@@ -54,7 +55,7 @@ If you run it without a name, will return (via 'less') entries from each one of 
 
 ### Mark all as read
 ```
-main.py clear [-n NAME] [-c CATEGORIES]
+termrss.py clear [-n NAME] [-c CATEGORIES]
 ```
 Marks the selected (or all) feed(s) as just read.
 - Name (optional): If present, only this feed will be marked as read.
@@ -62,14 +63,14 @@ Marks the selected (or all) feed(s) as just read.
 
 ### Import feeds
 
-    main.py -import -u PATH
+    termrss.py -import -u PATH
 If you export your feeds in an XML or OPML file from another feed reader, you can import them here. The importer will preserve name, URL, and categories.
 
  - -u: Path to the .xml or .opml file.
 ## Background updater
 If you don't wish to keep checking for new entries manually, the program can check your feeds for you and notify you if there are new entries available. 
 
-    main.py start
+    termrss.py start
 When you run this command, the program creates a file called "rssclient.pid" on its working directory. This file only contains the PID of the background process, so the program can stop it when you run the `stop` command, and will be deleted once the updater is stopped.
 Once the updater is running, the program will check for updates,as in the `update` method, after a certain amount of time. You can configure the frequency of updates in the `update_time_minutes` property of the `config.json` file (default 10 minutes).
 If the program finds an entry published at a time after the `last_check` property of that feed, it will show a notification and save the latest version of the feed in cache.
