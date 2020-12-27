@@ -18,6 +18,8 @@ Made in a week as a hobby project. Pull requests are welcome.
 
 ## Usage
 
+At any time you can check this documentation from your terminal by running `termrss.py help`
+
 ### Add new feeds
 
     termrss.py add -n NAME -u URL [-c CATEGORIES] [-f]
@@ -47,7 +49,7 @@ Checks all of your feeds for any new updates since last time you ran this comman
 ### Read entries
 
     termrss.py read [-n NAME] [-a] [-c CATEGORIES]
-If you run it without a name, will return (via 'less') entries from each one of your feeds (or each one of your feeds which are marked with the indicated categories) with unread entries. If you indicate a name, will return each entry from that feed, marking the newer ones.
+If you run it without a name, will return (via `less`) entries from each one of your feeds (or each one of your feeds which are marked with the indicated categories) with unread entries. If you indicate a name, will return each entry from that feed, marking the newer ones.
 
  - Name (optional): ID of the feed you want to read. If it's not present, will return the updated entries of all feeds.
  - -a (optional): Add this flag instead of writing a name to read all entries from all your feeds (or all your categorized feeds; see below.).
@@ -86,8 +88,8 @@ The structure of the file is as follows:
 	 - **last_read** [string]: A parsed DateTime object indicated the last time you ran the "read" command on this feed. If it hasn't been checked since it was added, the value is "1960-01-01 00:00:00"
 	 - **etag** [string]: The etag property of the feed, if it had one. Used to check changes. The program will update the cache if this property is different to the server's.
 	 - **last-modified** [string]: The last time the feed was modified, if it returned it. Used to check changes (see etag)
-	 - **unread** [int]: Number of entries saved on cache and published after the last time 'read' was run on this feed.
-	 - **valid** [bool]: If this is false, the program has detected some problem with the feed and will not update it any longer. You will be asked to remove this feed when you run the "update" command. Feeds are marked as not valid when the server returns a 410 HTTP code, indicating it has been deleted.
+	 - **unread** [int]: Number of entries saved on cache and published after the last time `read` was run on this feed.
+	 - **valid** [bool]: If this is false, the program has detected some problem with the feed and will not update it any longer. You will be asked to remove this feed when you run the `update` command. Feeds are marked as not valid when the server returns a 410 HTTP code, indicating it has been deleted.
 
 ## The config.json file
 This file allows you to configure certain parameters of the program.
