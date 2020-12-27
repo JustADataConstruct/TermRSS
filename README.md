@@ -21,6 +21,8 @@ Made in a week as a hobby project. Pull requests are welcome.
 At any time you can check this documentation from your terminal by running `termrss.py help`
 
 ### Add new feeds
+![Add command](https://github.com/JustADataConstruct/TermRSS/blob/main/images/add.png?raw=true)
+
 
     termrss.py add -n NAME -u URL [-c CATEGORIES] [-f]
   
@@ -36,11 +38,14 @@ At any time you can check this documentation from your terminal by running `term
  - Name: The ID of the feed you want to remove from your list.
 
 ### View all your feeds
+![Show command](https://github.com/JustADataConstruct/TermRSS/blob/main/images/show.png?raw=true)
 
     termrss.py show [-c CATEGORIES]
 View all of the feeds in your list, the last time they were checked for new entries, and their list of categories.
+
 -c (optional): List of categories, separated by comma. If it's present, will return results from feeds tagged as those categories.
 ### Update your feeds
+![](https://github.com/JustADataConstruct/TermRSS/blob/main/images/update.png?raw=true)
 
     termrss.py update [-c CATEGORIES] [-r]
 Checks all of your feeds for any new updates since last time you ran this command. If it has been too soon since your last check (configurable on 'config.json') or the server doesn't return any changes since your last check, it will keep in cache the results of the last time there was an update and return the number of unread entries on the saved version. Otherwise, it updates the saved results and returns the number of updates.
@@ -49,6 +54,7 @@ Checks all of your feeds for any new updates since last time you ran this comman
 
 -r :Refresh flag. Add this to force the program to download results from the server, even if there are no changes from the saved version. Use this if your cache is missing or damaged.
 ### Read entries
+![Read command](https://github.com/JustADataConstruct/TermRSS/blob/main/images/read.png?raw=true)
 
     termrss.py read [-n NAME] [-a] [-c CATEGORIES]
 If you run it without a name, will return (via `less`) entries from each one of your feeds (or each one of your feeds which are marked with the indicated categories) with unread entries. If you indicate a name, will return each entry from that feed, marking the newer ones.
@@ -66,6 +72,7 @@ Marks the selected (or all) feed(s) as just read.
 - -c (optional): List of categories, separated by comma. If present, each feed that is tagged as one of those categories will be marked as read.
 
 ### Import feeds
+![Import command](https://github.com/JustADataConstruct/TermRSS/blob/main/images/import.png?raw=true)
 
     termrss.py -import -u PATH
 If you export your feeds in an XML or OPML file from another feed reader, you can import them here. The importer will preserve name, URL, and categories.
@@ -74,9 +81,14 @@ If you export your feeds in an XML or OPML file from another feed reader, you ca
 ## Background updater
 If you don't wish to keep checking for new entries manually, the program can check your feeds for you and notify you if there are new entries available. 
 
+![Start command](https://github.com/JustADataConstruct/TermRSS/blob/main/images/start.png?raw=true)
+
     termrss.py start
 When you run this command, the program creates a file called "rssclient.pid" on its working directory. This file only contains the PID of the background process, so the program can stop it when you run the `stop` command, and will be deleted once the updater is stopped.
 Once the updater is running, the program will check for updates,as in the `update` method, after a certain amount of time. You can configure the frequency of updates in the `update_time_minutes` property of the `config.json` file (default 10 minutes).
+
+![Update notifications](https://github.com/JustADataConstruct/TermRSS/blob/main/images/notifications.png?raw=true)
+
 If the program finds an entry published at a time after the `last_check` property of that feed, it will show a notification and save the latest version of the feed in cache.
 ## The feedinfo.json file
 This file keeps track of the feeds you've suscribed to, their categories, and the last time you read an entry on that feed.
